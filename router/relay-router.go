@@ -10,30 +10,22 @@ import (
 func SetRelayRouter(router *gin.Engine) {
 	router.Use(middleware.CORS())
 	router.Use(middleware.DecompressRequestMiddleware())
-	// https://platform.openai.com/docs/api-reference/introduction
-	modelsRouter := router.Group("/v1/models")
-	modelsRouter.Use(middleware.TokenAuth())
-	{
-		modelsRouter.GET("", controller.ListModels)
-		modelsRouter.GET("/:model", controller.RetrieveModel)
+	
+	// 提取通用的 models 路由设置函数
+	setupModelsRouter := func(group *gin.RouterGroup) {
+		group.GET("", controller.ListModels)
+		group.GET("/:model", controller.RetrieveModel)
 	}
-	playgroundRouter := router.Group("/pg")
-	playgroundRouter.Use(middleware.UserAuth())
-	{
-		playgroundRouter.POST("/chat/completions", controller.Playground)
-	}
-	relayV1Router := router.Group("/v1")
-	relayV1Router.Use(middleware.TokenAuth())
-	relayV1Router.Use(middleware.ModelRequestRateLimit())
-	{
+
+	// 提取通用的 v1 路由设置函数
+	setupV1Router := func(v1Router *gin.RouterGroup) {
 		// WebSocket 路由
-		wsRouter := relayV1Router.Group("")
+		wsRouter := v1Router.Group("")
 		wsRouter.Use(middleware.Distribute())
 		wsRouter.GET("/realtime", controller.WssRelay)
-	}
-	{
-		//http router
-		httpRouter := relayV1Router.Group("")
+
+		// HTTP 路由
+		httpRouter := v1Router.Group("")
 		httpRouter.Use(middleware.Distribute())
 		httpRouter.POST("/messages", controller.RelayClaude)
 		httpRouter.POST("/completions", controller.Relay)
@@ -60,6 +52,34 @@ func SetRelayRouter(router *gin.Engine) {
 		httpRouter.DELETE("/models/:model", controller.RelayNotImplemented)
 		httpRouter.POST("/moderations", controller.Relay)
 		httpRouter.POST("/rerank", controller.Relay)
+	}
+
+	// 设置 /v1/models 路由
+	modelsRouter := router.Group("/v1/models")
+	modelsRouter.Use(middleware.TokenAuth())
+	setupModelsRouter(modelsRouter)
+
+	// 设置 /hf/v1/models 路由
+	hfModelsRouter := router.Group("/hf/v1/models")
+	hfModelsRouter.Use(middleware.TokenAuth())
+	setupModelsRouter(hfModelsRouter)
+
+	// 设置 /v1 路由组
+	relayV1Router := router.Group("/v1")
+	relayV1Router.Use(middleware.TokenAuth())
+	relayV1Router.Use(middleware.ModelRequestRateLimit())
+	setupV1Router(relayV1Router)
+
+	// 设置 /hf/v1 路由组
+	relayHfV1Router := router.Group("/hf/v1")
+	relayHfV1Router.Use(middleware.TokenAuth())
+	relayHfV1Router.Use(middleware.ModelRequestRateLimit())
+	setupV1Router(relayHfV1Router)
+
+	playgroundRouter := router.Group("/pg")
+	playgroundRouter.Use(middleware.UserAuth())
+	{
+		playgroundRouter.POST("/chat/completions", controller.Playground)
 	}
 
 	relayMjRouter := router.Group("/mj")
