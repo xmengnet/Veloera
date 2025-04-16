@@ -22,6 +22,7 @@ import {
   Space,
   Spin,
   Typography,
+  Switch,
 } from '@douyinfe/semi-ui';
 import Title from '@douyinfe/semi-ui/lib/es/typography/title';
 import { Divider } from 'semantic-ui-react';
@@ -37,9 +38,11 @@ const EditRedemption = (props) => {
     name: '',
     quota: 100000,
     count: 1,
+    is_gift: false,
+    max_uses: -1  // -1 means unlimited
   };
   const [inputs, setInputs] = useState(originInputs);
-  const { name, quota, count } = inputs;
+  const { name, quota, count, is_gift, max_uses } = inputs;
 
   const handleCancel = () => {
     props.handleClose();
@@ -209,6 +212,33 @@ const EditRedemption = (props) => {
                 onChange={(value) => handleInputChange('count', value)}
                 value={count}
                 autoComplete='new-password'
+                type='number'
+              />
+            </>
+          )}
+          <Divider />
+          <Typography.Text>{t('兑换码类型')}</Typography.Text>
+          <div style={{ marginTop: 8 }}>
+            <Space>
+              <Typography.Text>{t('礼品码')}</Typography.Text>
+              <Switch
+                checked={inputs.is_gift}
+                onChange={(checked) => handleInputChange('is_gift', checked)}
+              />
+            </Space>
+          </div>
+          
+          {inputs.is_gift && (
+            <>
+              <Divider />
+              <Typography.Text>{t('最大使用次数')}</Typography.Text>
+              <Input
+                style={{ marginTop: 8 }}
+                label={t('最大使用次数')}
+                name='max_uses'
+                placeholder={t('留空或-1表示无限制')}
+                onChange={(value) => handleInputChange('max_uses', value)}
+                value={inputs.max_uses}
                 type='number'
               />
             </>

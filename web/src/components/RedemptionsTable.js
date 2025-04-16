@@ -58,6 +58,16 @@ const RedemptionsTable = () => {
     }
   };
 
+  const renderType = (isGift) => {
+    return isGift ? 
+      <Tag color="purple">{t('礼品码')}</Tag> : 
+      <Tag color="blue">{t('兑换码')}</Tag>;
+  };
+
+  const renderMaxUses = (maxUses) => {
+    return maxUses === -1 ? t('无限制') : maxUses;
+  };
+
   const columns = [
     {
       title: t('ID'),
@@ -95,6 +105,21 @@ const RedemptionsTable = () => {
       render: (text, record, index) => {
         return <div>{text === 0 ? t('无') : text}</div>;
       },
+    },
+    {
+      title: t('类型'),
+      dataIndex: 'is_gift',
+      render: (text, record) => renderType(record.is_gift),
+    },
+    {
+      title: t('最大使用次数'),
+      dataIndex: 'max_uses',
+      render: (text, record) => record.is_gift ? renderMaxUses(record.max_uses) : '-',
+    },
+    {
+      title: t('已使用次数'),
+      dataIndex: 'used_count',
+      render: (text, record) => record.is_gift ? text : '-',
     },
     {
       title: '',
@@ -341,7 +366,7 @@ const RedemptionsTable = () => {
   };
 
   const handleRow = (record, index) => {
-    if (record.status !== 1) {
+    if (record.status !== 1 || (record.is_gift && record.used_count >= record.max_uses && record.max_uses !== -1)) {
       return {
         style: {
           background: 'var(--semi-color-disabled-border)',

@@ -198,6 +198,7 @@ func InitLogDB() (err error) {
 }
 
 func migrateDB() error {
+	// 按顺序迁移所有模型
 	err := DB.AutoMigrate(&Channel{})
 	if err != nil {
 		return err
@@ -215,6 +216,10 @@ func migrateDB() error {
 		return err
 	}
 	err = DB.AutoMigrate(&Redemption{})
+	if err != nil {
+		return err
+	}
+	err = DB.AutoMigrate(&RedemptionLog{})
 	if err != nil {
 		return err
 	}
@@ -243,9 +248,12 @@ func migrateDB() error {
 		return err
 	}
 	err = DB.AutoMigrate(&Setup{})
+	if err != nil {
+		return err
+	}
+	
 	common.SysLog("database migrated")
-	//err = createRootAccountIfNeed()
-	return err
+	return nil
 }
 
 func migrateLOGDB() error {

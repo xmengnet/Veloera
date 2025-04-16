@@ -50,15 +50,21 @@ const TopUp = () => {
       });
       const { success, message, data } = res.data;
       if (success) {
-        showSuccess(t('兑换成功！'));
+        let successMessage = t('兑换成功！');
+        if (data.is_gift) {
+          successMessage = t('礼品码兑换成功！');
+        }
+        showSuccess(successMessage);
+        
+        // 确保 quota 是数字并且正确渲染
+        const quotaAmount = parseInt(data.quota, 10);
         Modal.success({
-          title: t('兑换成功！'),
-          content: t('成功兑换额度：') + renderQuota(data),
+          title: successMessage,
+          content: t('成功兑换额度：') + renderQuotaWithAmount(quotaAmount),
           centered: true,
         });
-        setUserQuota((quota) => {
-          return quota + data;
-        });
+        
+        setUserQuota((quota) => quota + quotaAmount);
         setRedemptionCode('');
       } else {
         showError(message);

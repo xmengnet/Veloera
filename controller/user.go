@@ -896,7 +896,7 @@ func TopUp(c *gin.Context) {
 		return
 	}
 	id := c.GetInt("id")
-	quota, err := model.Redeem(req.Key, id)
+	quota, isGift, err := model.Redeem(req.Key, id)  // 修改这里，接收所有三个返回值
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -907,7 +907,10 @@ func TopUp(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    quota,
+		"data": gin.H{
+			"quota":   quota,
+			"is_gift": isGift,  // 可以选择返回给前端，用于显示不同的提示信息
+		},
 	})
 	return
 }

@@ -126,6 +126,7 @@ func AddRedemption(c *gin.Context) {
 		})
 		return
 	}
+	
 	var keys []string
 	for i := 0; i < redemption.Count; i++ {
 		key := common.GetUUID()
@@ -135,6 +136,8 @@ func AddRedemption(c *gin.Context) {
 			Key:         key,
 			CreatedTime: common.GetTimestamp(),
 			Quota:       redemption.Quota,
+			IsGift:      redemption.IsGift,
+			MaxUses:     redemption.MaxUses,
 		}
 		err = cleanRedemption.Insert()
 		if err != nil {

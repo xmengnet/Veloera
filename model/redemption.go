@@ -20,7 +20,18 @@ type Redemption struct {
 	RedeemedTime int64          `json:"redeemed_time" gorm:"bigint"`
 	Count        int            `json:"count" gorm:"-:all"` // only for api request
 	UsedUserId   int            `json:"used_user_id"`
+	IsGift       bool           `json:"is_gift" gorm:"default:false"`
+	MaxUses      int            `json:"max_uses" gorm:"default:-1"` // -1 means unlimited
+	UsedCount    int            `json:"used_count" gorm:"default:0"`
 	DeletedAt    gorm.DeletedAt `gorm:"index"`
+}
+
+// RedemptionLog 记录礼品码的使用记录
+type RedemptionLog struct {
+	Id           int   `json:"id"`
+	RedemptionId int   `json:"redemption_id" gorm:"index"`
+	UserId       int   `json:"user_id" gorm:"index"`
+	UsedTime     int64 `json:"used_time" gorm:"bigint"`
 }
 
 func GetAllRedemptions(startIdx int, num int) (redemptions []*Redemption, total int64, err error) {
@@ -109,12 +120,12 @@ func GetRedemptionById(id int) (*Redemption, error) {
 	return &redemption, err
 }
 
-func Redeem(key string, userId int) (quota int, err error) {
+func Redeem(key string, userId int) (quota int, isGift bool, err error) {
 	if key == "" {
-		return 0, errors.New("未提供兑换码")
+		return 0, false, errors.New("未提供兑换码")
 	}
 	if userId == 0 {
-		return 0, errors.New("无效的 user id")
+		return 0, false, errors.New("无效的 user id")
 	}
 	redemption := &Redemption{}
 
@@ -128,24 +139,66 @@ func Redeem(key string, userId int) (quota int, err error) {
 		if err != nil {
 			return errors.New("无效的兑换码")
 		}
-		if redemption.Status != common.RedemptionCodeStatusEnabled {
-			return errors.New("该兑换码已被使用")
+		
+		if !redemption.IsGift {
+			// 普通兑换码逻辑
+			if redemption.Status != common.RedemptionCodeStatusEnabled {
+				return errors.New("该兑换码已被使用")
+			}
+			err = tx.Model(&User{}).Where("id = ?", userId).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
+			if err != nil {
+				return err
+			}
+			redemption.RedeemedTime = common.GetTimestamp()
+			redemption.Status = common.RedemptionCodeStatusUsed
+			redemption.UsedUserId = userId
+		} else {
+			// 礼品码逻辑
+			if redemption.MaxUses != -1 && redemption.UsedCount >= redemption.MaxUses {
+				return errors.New("该礼品码已达到最大使用次数")
+			}
+			// 检查用户是否已经使用过这个礼品码
+			var usageCount int64
+			err = tx.Model(&RedemptionLog{}).Where("redemption_id = ? AND user_id = ?", redemption.Id, userId).Count(&usageCount).Error
+			if err != nil {
+				return err
+			}
+			if usageCount > 0 {
+				return errors.New("您已经使用过这个礼品码")
+			}
+			
+			err = tx.Model(&User{}).Where("id = ?", userId).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
+			if err != nil {
+				return err
+			}
+			
+			// 记录使用日志
+			log := RedemptionLog{
+				RedemptionId: redemption.Id,
+				UserId:       userId,
+				UsedTime:     common.GetTimestamp(),
+			}
+			if err = tx.Create(&log).Error; err != nil {
+				return err
+			}
+			
+			redemption.UsedCount++
+			if redemption.MaxUses != -1 && redemption.UsedCount >= redemption.MaxUses {
+				redemption.Status = common.RedemptionCodeStatusUsed
+			}
 		}
-		err = tx.Model(&User{}).Where("id = ?", userId).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
-		if err != nil {
-			return err
-		}
-		redemption.RedeemedTime = common.GetTimestamp()
-		redemption.Status = common.RedemptionCodeStatusUsed
-		redemption.UsedUserId = userId
+		
 		err = tx.Save(redemption).Error
 		return err
 	})
 	if err != nil {
-		return 0, errors.New("兑换失败，" + err.Error())
+		return 0, false, errors.New("兑换失败，" + err.Error())
 	}
-	RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过兑换码充值 %s，兑换码ID %d", common.LogQuota(redemption.Quota), redemption.Id))
-	return redemption.Quota, nil
+	RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过%s充值 %s，兑换码ID %d", 
+		map[bool]string{true: "礼品码", false: "兑换码"}[redemption.IsGift],
+		common.LogQuota(redemption.Quota), 
+		redemption.Id))
+	return redemption.Quota, redemption.IsGift, nil
 }
 
 func (redemption *Redemption) Insert() error {
