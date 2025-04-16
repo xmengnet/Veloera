@@ -251,7 +251,8 @@ func AddChannel(c *gin.Context) {
 		return
 	}
 	channel.CreatedTime = common.GetTimestamp()
-	keys := strings.Split(channel.Key, "\n")
+	
+	// 特殊处理 VertexAi 类型的渠道
 	if channel.Type == common.ChannelTypeVertexAi {
 		if channel.Other == "" {
 			c.JSON(http.StatusOK, gin.H{
@@ -261,7 +262,6 @@ func AddChannel(c *gin.Context) {
 			return
 		} else {
 			if common.IsJsonStr(channel.Other) {
-				// must have default
 				regionMap := common.StrToMap(channel.Other)
 				if regionMap["default"] == nil {
 					c.JSON(http.StatusOK, gin.H{
@@ -272,29 +272,21 @@ func AddChannel(c *gin.Context) {
 				}
 			}
 		}
-		keys = []string{channel.Key}
 	}
-	channels := make([]model.Channel, 0, len(keys))
-	for _, key := range keys {
-		if key == "" {
-			continue
+
+	// 验证模型名称长度
+	models := strings.Split(channel.Models, ",")
+	for _, model := range models {
+		if len(model) > 255 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": fmt.Sprintf("模型名称过长: %s", model),
+			})
+			return
 		}
-		localChannel := channel
-		localChannel.Key = key
-		// Validate the length of the model name
-		models := strings.Split(localChannel.Models, ",")
-		for _, model := range models {
-			if len(model) > 255 {
-				c.JSON(http.StatusOK, gin.H{
-					"success": false,
-					"message": fmt.Sprintf("模型名称过长: %s", model),
-				})
-				return
-			}
-		}
-		channels = append(channels, localChannel)
 	}
-	err = model.BatchInsertChannels(channels)
+
+	err = channel.Insert()  // 使用 Insert 方法替代 InsertChannel
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -302,6 +294,7 @@ func AddChannel(c *gin.Context) {
 		})
 		return
 	}
+	
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

@@ -219,7 +219,16 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set("auto_ban", channel.GetAutoBan())
 	c.Set("model_mapping", channel.GetModelMapping())
 	c.Set("status_code_mapping", channel.GetStatusCodeMapping())
-	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+	
+	// 如果key包含逗号，随机选择一个key
+	if strings.Contains(channel.Key, ",") {
+		keys := strings.Split(channel.Key, ",")
+		selectedKey := keys[common.GetRandomInt(len(keys))]
+		c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", strings.TrimSpace(selectedKey)))
+	} else {
+		c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+	}
+	
 	c.Set("base_url", channel.GetBaseURL())
 	// TODO: api_version统一
 	switch channel.Type {

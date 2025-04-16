@@ -42,20 +42,19 @@ const REGION_EXAMPLE = {
 };
 
 function type2secretPrompt(type) {
-  // inputs.type === 15 ? '按照如下格式输入：APIKey|SecretKey' : (inputs.type === 18 ? '按照如下格式输入：APPID|APISecret|APIKey' : '请输入渠道对应的鉴权密钥')
   switch (type) {
     case 15:
-      return '按照如下格式输入：APIKey|SecretKey';
+      return '按照如下格式输入：APIKey|SecretKey，多个密钥使用英文逗号分隔';
     case 18:
-      return '按照如下格式输入：APPID|APISecret|APIKey';
+      return '按照如下格式输入：APPID|APISecret|APIKey，多个密钥使用英文逗号分隔';
     case 22:
-      return '按照如下格式输入：APIKey-AppId，例如：fastgpt-0sp2gtvfdgyi4k30jwlgwf1i-64f335d84283f05518e9e041';
+      return '按照如下格式输入：APIKey-AppId，例如：fastgpt-0sp2gtvfdgyi4k30jwlgwf1i-64f335d84283f05518e9e041，多个密钥使用英文逗号分隔';
     case 23:
-      return '按照如下格式输入：AppId|SecretId|SecretKey';
+      return '按照如下格式输入：AppId|SecretId|SecretKey，多个密钥使用英文逗号分隔';
     case 33:
-      return '按照如下格式输入：Ak|Sk|Region';
+      return '按照如下格式输入：Ak|Sk|Region，多个密钥使用英文逗号分隔';
     default:
-      return '请输入渠道对应的鉴权密钥';
+      return '请输入渠道对应的鉴权密钥，多个密钥使用英文逗号分隔';
   }
 }
 
@@ -582,76 +581,17 @@ const EditChannel = (props) => {
           <div style={{ marginTop: 10 }}>
             <Typography.Text strong>{t('密钥')}：</Typography.Text>
           </div>
-          {batch ? (
-            <TextArea
-              label={t('密钥')}
-              name='key'
-              required
-              placeholder={t('请输入密钥，一行一个')}
-              onChange={(value) => {
-                handleInputChange('key', value);
-              }}
-              value={inputs.key}
-              style={{ minHeight: 150, fontFamily: 'JetBrains Mono, Consolas' }}
-              autoComplete='new-password'
-            />
-          ) : (
-            <>
-              {inputs.type === 41 ? (
-                <TextArea
-                  label={t('鉴权json')}
-                  name='key'
-                  required
-                  placeholder={
-                    '{\n' +
-                    '  "type": "service_account",\n' +
-                    '  "project_id": "abc-bcd-123-456",\n' +
-                    '  "private_key_id": "123xxxxx456",\n' +
-                    '  "private_key": "-----BEGIN PRIVATE KEY-----xxxx\n' +
-                    '  "client_email": "xxx@developer.gserviceaccount.com",\n' +
-                    '  "client_id": "111222333",\n' +
-                    '  "auth_uri": "https://accounts.google.com/o/oauth2/auth",\n' +
-                    '  "token_uri": "https://oauth2.googleapis.com/token",\n' +
-                    '  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",\n' +
-                    '  "client_x509_cert_url": "https://xxxxx.gserviceaccount.com",\n' +
-                    '  "universe_domain": "googleapis.com"\n' +
-                    '}'
-                  }
-                  onChange={(value) => {
-                    handleInputChange('key', value);
-                  }}
-                  autosize={{ minRows: 10 }}
-                  value={inputs.key}
-                  autoComplete='new-password'
-                />
-              ) : (
-                <Input
-                  label={t('密钥')}
-                  name='key'
-                  required
-                  placeholder={t(type2secretPrompt(inputs.type))}
-                  onChange={(value) => {
-                    handleInputChange('key', value);
-                  }}
-                  value={inputs.key}
-                  autoComplete='new-password'
-                />
-              )}
-            </>
-          )}
-          {!isEdit && (
-            <div style={{ marginTop: 10, display: 'flex' }}>
-              <Space>
-                <Checkbox
-                  checked={batch}
-                  label={t('批量创建')}
-                  name='batch'
-                  onChange={() => setBatch(!batch)}
-                />
-                <Typography.Text strong>{t('批量创建')}</Typography.Text>
-              </Space>
-            </div>
-          )}
+          <Input
+            label={t('密钥')}
+            name='key'
+            required
+            placeholder={t(type2secretPrompt(inputs.type))}
+            onChange={(value) => {
+              handleInputChange('key', value);
+            }}
+            value={inputs.key}
+            autoComplete='new-password'
+          />
           {inputs.type === 22 && (
             <>
               <div style={{ marginTop: 10 }}>
