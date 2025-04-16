@@ -1,3 +1,17 @@
+# Gating
+
+优秀的AI API网关系统
+
+> [!IMPORTANT]  
+> - 本项目在活跃开发阶段, 可能出现 Bug, 不建议用于生产环境! 
+
+此项目基于 New Api 二次开发, 并会根据我需要开发更多功能.  
+点个 Star 再走吧~
+
+
+
+<!--
+
 <p align="right">
    <strong>中文</strong> | <a href="./README.en.md">English</a>
 </p>
@@ -188,3 +202,4 @@ docker run --name new-api -d --restart always -p 3000:3000 -e SQL_DSN="root:1234
 ## 🌟 Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Calcium-Ion/new-api&type=Date)](https://star-history.com/#Calcium-Ion/new-api&Date)
+-->
