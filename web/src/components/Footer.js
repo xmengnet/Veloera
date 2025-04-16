@@ -25,11 +25,11 @@ const FooterBar = () => {
         target='_blank'
         rel='noreferrer'
       >
-        New API {import.meta.env.VITE_REACT_APP_VERSION}{' '}
+        Gating {import.meta.env.VITE_REACT_APP_VERSION}{' '}
       </a>
       {t('由')}{' '}
       <a href='https://github.com/Calcium-Ion' target='_blank' rel='noreferrer'>
-        Calcium-Ion
+        Neuroplexus
       </a>{' '}
       {t('开发，基于')}{' '}
       <a
