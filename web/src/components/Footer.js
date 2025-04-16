@@ -25,7 +25,7 @@ const FooterBar = () => {
         target='_blank'
         rel='noreferrer'
       >
-        Gating {import.meta.env.VITE_REACT_APP_VERSION}{' '}
+        Veloera {import.meta.env.VITE_REACT_APP_VERSION}{' '}
       </a>
       {t('由')}{' '}
       <a href='https://github.com/Calcium-Ion' target='_blank' rel='noreferrer'>

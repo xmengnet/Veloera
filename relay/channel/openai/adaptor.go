@@ -135,7 +135,7 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, header *http.Header, info *
 	}
 	if info.ChannelType == common.ChannelTypeOpenRouter {
 		header.Set("HTTP-Referer", "https://github.com/Calcium-Ion/new-api")
-		header.Set("X-Title", "Gating")
+		header.Set("X-Title", "Veloera")
 	}
 	return nil
 }

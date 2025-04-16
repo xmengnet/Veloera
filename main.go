@@ -40,7 +40,7 @@ func main() {
 	common.LoadEnv()
 
 	common.SetupLogger()
-	common.SysLog("Gating " + common.Version + " started")
+	common.SysLog("Veloera " + common.Version + " started")
 	if os.Getenv("GIN_MODE") != "debug" {
 		gin.SetMode(gin.ReleaseMode)
 	}
