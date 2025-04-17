@@ -42,8 +42,13 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            calciumion/new-api
+            velorea/veloera
             ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest,enable=${{ !endsWith(github.ref, '-alpha') && !endsWith(github.ref, '-beta') }}
+            type=raw,value=alpha,enable=${{ endsWith(github.ref, '-alpha') }}
+            type=raw,value=beta,enable=${{ endsWith(github.ref, '-beta') }}
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v5
