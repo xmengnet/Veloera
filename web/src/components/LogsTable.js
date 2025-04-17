@@ -1229,6 +1229,16 @@ const LogsTable = () => {
             >
               {t('查询')}
             </Button>
+            <Button
+              theme='light'
+              type='primary'
+              icon={<IconRefresh />}
+              onClick={refresh}
+              loading={loading}
+              style={{ marginTop: 24, marginLeft: 8 }}
+            >
+              {t('刷新')}
+            </Button>
             <Form.Section></Form.Section>
           </>
         </Form>
