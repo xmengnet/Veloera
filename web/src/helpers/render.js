@@ -288,7 +288,7 @@ export function renderQuotaWithAmount(amount) {
   let displayInCurrency = localStorage.getItem('display_in_currency');
   displayInCurrency = displayInCurrency === 'true';
   if (displayInCurrency) {
-    return '$' + amount;
+    return '$' + amount / getQuotaPerUnit();
   } else {
     return renderUnitWithQuota(amount);
   }
