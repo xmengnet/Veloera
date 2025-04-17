@@ -111,8 +111,8 @@ export default function SettingsSensitiveWords(props) {
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
                 <Form.TextArea
                   label={t('屏蔽词列表')}
-                  extraText={t('一行一个屏蔽词，不需要符号分割')}
-                  placeholder={t('一行一个屏蔽词，不需要符号分割')}
+                  extraText={t('一行一个屏蔽词，不需要符号分割。支持正则表达式，使用 regex: 前缀，如 regex:foo.*bar')}
+                  placeholder={t('一行一个屏蔽词，使用 regex: 前缀表示正则表达式\n示例：\ntest_sensitive\nregex:foo.*bar')}
                   field={'SensitiveWords'}
                   onChange={(value) =>
                     setInputs({

@@ -1,6 +1,9 @@
 package setting
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 var CheckSensitiveEnabled = true
 var CheckSensitiveOnPromptEnabled = true
@@ -13,23 +16,58 @@ var StopOnSensitiveEnabled = true
 // StreamCacheQueueLength 流模式缓存队列长度，0表示无缓存
 var StreamCacheQueueLength = 0
 
-// SensitiveWords 敏感词
-// var SensitiveWords []string
+// SensitiveWords 普通屏蔽词
 var SensitiveWords = []string{
 	"test_sensitive",
 }
 
+// RegexSensitiveWords 正则表达式屏蔽词
+var RegexSensitiveWords = []string{}
+
+// 判断字符串是否是有效的正则表达式
+func isValidRegex(pattern string) bool {
+	_, err := regexp.Compile(pattern)
+	return err == nil
+}
+
 func SensitiveWordsToString() string {
-	return strings.Join(SensitiveWords, "\n")
+	var builder strings.Builder
+	
+	// Add normal words
+	for _, word := range SensitiveWords {
+		builder.WriteString(word)
+		builder.WriteString("\n")
+	}
+	
+	// Add regex patterns with "regex:" prefix
+	for _, pattern := range RegexSensitiveWords {
+		builder.WriteString("regex:")
+		builder.WriteString(pattern)
+		builder.WriteString("\n")
+	}
+	
+	return builder.String()
 }
 
 func SensitiveWordsFromString(s string) {
 	SensitiveWords = []string{}
-	sw := strings.Split(s, "\n")
-	for _, w := range sw {
-		w = strings.TrimSpace(w)
-		if w != "" {
-			SensitiveWords = append(SensitiveWords, w)
+	RegexSensitiveWords = []string{}
+	
+	lines := strings.Split(s, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		
+		// Check if line starts with "regex:"
+		if strings.HasPrefix(line, "regex:") {
+			pattern := strings.TrimPrefix(line, "regex:")
+			if isValidRegex(pattern) {
+				RegexSensitiveWords = append(RegexSensitiveWords, pattern)
+			}
+		} else {
+			SensitiveWords = append(SensitiveWords, line)
 		}
 	}
 }
