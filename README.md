@@ -8,7 +8,52 @@
 此项目基于 New Api 二次开发, 并会根据我需要开发更多功能.  
 点个 Star 再走吧~
 
+## 部署
 
+> [!TIP]
+> 最新版Docker镜像：`ghcr.io/veloera/veloera:latest`  
+
+### docker-compose
+
+1. 克隆此仓库
+
+```shell
+git clone https://github.com/veloera/veloera.git
+cd veloera
+```
+
+2. 修改配置文件
+
+```shell
+nano docker-compose.yml
+```
+
+3. 启动服务
+
+```shell
+docker-compose up -d
+```
+
+## 环境变量
+
+- `GENERATE_DEFAULT_TOKEN`：是否为新注册用户生成初始令牌，默认为 `false`
+- `STREAMING_TIMEOUT`：流式回复超时时间，默认60秒
+- `DIFY_DEBUG`：Dify渠道是否输出工作流和节点信息，默认 `true`
+- `FORCE_STREAM_OPTION`：是否覆盖客户端stream_options参数，默认 `true`
+- `GET_MEDIA_TOKEN`：是否统计图片token，默认 `true`
+- `GET_MEDIA_TOKEN_NOT_STREAM`：非流情况下是否统计图片token，默认 `true`
+- `UPDATE_TASK`：是否更新异步任务（Midjourney、Suno），默认 `true`
+- `COHERE_SAFETY_SETTING`：Cohere模型安全设置，可选值为 `NONE`, `CONTEXTUAL`, `STRICT`，默认 `NONE`
+- `GEMINI_VISION_MAX_IMAGE_NUM`：Gemini模型最大图片数量，默认 `16`
+- `MAX_FILE_DOWNLOAD_MB`: 最大文件下载大小，单位MB，默认 `20`
+- `CRYPTO_SECRET`：加密密钥，用于加密数据库内容
+- `AZURE_DEFAULT_API_VERSION`：Azure渠道默认API版本，默认 `2024-12-01-preview`
+- `NOTIFICATION_LIMIT_DURATION_MINUTE`：通知限制持续时间，默认 `10`分钟
+- `NOTIFY_LIMIT_COUNT`：用户通知在指定持续时间内的最大数量，默认 `2`
+
+## 🌟 Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Veloera/Veloera&type=Date)](https://star-history.com/#Veloera/Veloera&Date)
 
 <!--
 
