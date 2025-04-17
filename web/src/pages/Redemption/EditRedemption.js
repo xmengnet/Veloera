@@ -77,13 +77,13 @@ const EditRedemption = (props) => {
   const submit = async () => {
     let name = inputs.name;
     if (!isEdit && inputs.name === '') {
-      // set default name
       name = renderQuota(quota);
     }
     setLoading(true);
     let localInputs = inputs;
     localInputs.count = parseInt(localInputs.count);
     localInputs.quota = parseInt(localInputs.quota);
+    localInputs.max_uses = parseInt(localInputs.max_uses); // Add this line
     localInputs.name = name;
     let res;
     if (isEdit) {
