@@ -27,6 +27,7 @@ import {
   Modal,
 } from '@douyinfe/semi-ui';
 import { getChannelModels, loadChannelModels } from '../../components/utils.js';
+import { IconEyeOpened, IconEyeClosedSolid } from '@douyinfe/semi-icons';
 
 const MODEL_MAPPING_EXAMPLE = {
   'gpt-3.5-turbo': 'gpt-3.5-turbo-0125',
@@ -64,6 +65,8 @@ const EditChannel = (props) => {
   const channelId = props.editingChannel.id;
   const isEdit = channelId !== undefined;
   const [loading, setLoading] = useState(isEdit);
+  const [showKey, setShowKey] = useState(false);
+  const [initialKey, setInitialKey] = useState('');
   const handleCancel = () => {
     props.handleClose();
   };
@@ -585,12 +588,21 @@ const EditChannel = (props) => {
             label={t('密钥')}
             name='key'
             required
-            placeholder={t(type2secretPrompt(inputs.type))}
+            type={showKey ? 'text' : 'password'}
+            placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
             onChange={(value) => {
               handleInputChange('key', value);
             }}
-            value={inputs.key}
+            value={inputs.key || (isEdit ? initialKey : '')}
             autoComplete='new-password'
+            addonAfter={
+              <Button
+                theme="borderless"
+                icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
+                onClick={() => setShowKey(!showKey)}
+                style={{ padding: '0 4px' }}
+              />
+            }
           />
           {inputs.type === 22 && (
             <>

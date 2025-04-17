@@ -224,7 +224,7 @@ func GetChannel(c *gin.Context) {
 		})
 		return
 	}
-	channel, err := model.GetChannelById(id, false)
+	channel, err := model.GetChannelById(id, true) // Make sure to get full channel info
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -235,7 +235,7 @@ func GetChannel(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    channel,
+		"data":    channel, // The key will be included in the response
 	})
 	return
 }
