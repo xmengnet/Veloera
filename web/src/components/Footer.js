@@ -21,14 +21,14 @@ const FooterBar = () => {
   const defaultFooter = (
     <div className='custom-footer'>
       <a
-        href='https://github.com/Calcium-Ion/new-api'
+        href='https://github.com/Veloera/Veloera'
         target='_blank'
         rel='noreferrer'
       >
         Veloera {import.meta.env.VITE_REACT_APP_VERSION}{' '}
       </a>
       {t('由')}{' '}
-      <a href='https://github.com/Calcium-Ion' target='_blank' rel='noreferrer'>
+      <a href='https://github.com/Veloera' target='_blank' rel='noreferrer'>
         Neuroplexus
       </a>{' '}
       {t('开发，基于')}{' '}

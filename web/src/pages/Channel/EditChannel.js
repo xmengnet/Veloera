@@ -567,7 +567,7 @@ const EditChannel = (props) => {
               <div style={{ marginTop: 10 }}>
                 <Typography.Text strong>{t('API地址')}：</Typography.Text>
               </div>
-              <Tooltip content={t('对于官方渠道，new-api已经内置地址，除非是第三方代理站点或者Azure的特殊接入地址，否则不需要填写')}>
+              <Tooltip content={t('对于官方渠道，Veloera已经内置地址，除非是第三方代理站点或者Azure的特殊接入地址，否则不需要填写')}>
                 <Input
                   label={t('API地址')}
                   name="base_url"
@@ -954,7 +954,7 @@ const EditChannel = (props) => {
                 }}
                 onClick={() => {
                   window.open(
-                    'https://github.com/Calcium-Ion/new-api/blob/main/docs/channel/other_setting.md',
+                    'https://github.com/Veloera/Veloera/blob/main/docs/channel/other_setting.md',
                   );
                 }}
               >

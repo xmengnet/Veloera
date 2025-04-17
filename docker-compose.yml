@@ -1,9 +1,9 @@
 version: '3.4'
 
 services:
-  new-api:
+  veloera:
     image: veloera/veloera:latest
-    container_name: new-api
+    container_name: veloera
     restart: always
     command: --log-dir /app/logs
     ports:
@@ -12,7 +12,7 @@ services:
       - ./data:/data
       - ./logs:/app/logs
     environment:
-      - SQL_DSN=root:123456@tcp(mysql:3306)/new-api  # Point to the mysql service
+      - SQL_DSN=root:123456@tcp(mysql:3306)/veloera  # Point to the mysql service
       - REDIS_CONN_STRING=redis://redis
       - TZ=Asia/Shanghai
     #      - TIKTOKEN_CACHE_DIR=./tiktoken_cache  # 如果需要使用tiktoken_cache，请取消注释
@@ -41,7 +41,7 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: 123456  # Ensure this matches the password in SQL_DSN
-      MYSQL_DATABASE: new-api
+      MYSQL_DATABASE: veloera
     volumes:
       - mysql_data:/var/lib/mysql
     # ports:

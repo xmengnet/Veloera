@@ -180,7 +180,7 @@ const Playground = () => {
     let source = new SSE('/pg/chat/completions', {
       headers: {
         'Content-Type': 'application/json',
-        'New-Api-User': getUserIdFromLocalStorage(),
+        'Veloera-User': getUserIdFromLocalStorage(),
       },
       method: 'POST',
       payload: JSON.stringify(payload),
