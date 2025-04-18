@@ -376,15 +376,13 @@ const LogsTable = () => {
           record.type === 0 || record.type === 2 ? (
             <div>
               {
-                <Tooltip content={record.channel_name || '[未知]'}>
-                  <Tag
-                    color={colors[parseInt(text) % colors.length]}
-                    size='large'
-                  >
-                    {' '}
-                    {text}{' '}
-                  </Tag>
-                </Tooltip>
+                <Tag
+                  color={colors[parseInt(text) % colors.length]}
+                  size='large'
+                >
+                  {' '}
+                  {text}{' '} ({record.channel_name || '[未知]'})
+                </Tag>
               }
             </div>
           ) : (
