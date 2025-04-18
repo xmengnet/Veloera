@@ -254,12 +254,17 @@ const SiderBar = () => {
         to: '/playground',
         icon: <IconCommentStroked />,
       },
-      {
-        text: t('聊天'),
-        itemKey: 'chat',
-        items: chatItems,
-        icon: <IconComment />,
-      },
+      // Only include chat menu if there are chat items
+      ...(chatItems.length > 0
+        ? [
+            {
+              text: t('聊天'),
+              itemKey: 'chat',
+              items: chatItems,
+              icon: <IconComment />,
+            },
+          ]
+        : []),
     ],
     [chatItems, t],
   );
