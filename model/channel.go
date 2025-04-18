@@ -186,32 +186,21 @@ func BatchInsertChannels(channels []Channel) error {
 func BatchDeleteChannels(ids []int) error {
 	//使用事务 删除channel表和channel_ability表
 	tx := DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	if err := tx.Where("id in (?)", ids).Delete(&Channel{}).Error; err != nil {
+	err := tx.Where("id in (?)", ids).Delete(&Channel{}).Error
+	if err != nil {
+		// 回滚事务
 		tx.Rollback()
 		return err
 	}
-
-	if err := tx.Where("channel_id in (?)", ids).Delete(&Ability{}).Error; err != nil {
+	err = tx.Where("channel_id in (?)", ids).Delete(&Ability{}).Error
+	if err != nil {
+		// 回滚事务
 		tx.Rollback()
 		return err
 	}
-
 	// 提交事务
-	if err := tx.Commit().Error; err != nil {
-		return err
-	}
-
-	// 重新排序ID
-	return ReorderChannelIds()
+	tx.Commit()
+	return err
 }
 
 func (channel *Channel) GetPriority() int64 {
@@ -292,36 +281,12 @@ func (channel *Channel) UpdateBalance(balance float64) {
 
 func (channel *Channel) Delete() error {
 	var err error
-	// 开启事务
-	tx := DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	// 删除渠道
-	if err = tx.Delete(channel).Error; err != nil {
-		tx.Rollback()
+	err = DB.Delete(channel).Error
+	if err != nil {
 		return err
 	}
-
-	// 删除abilities
-	if err = tx.Where("channel_id = ?", channel.Id).Delete(&Ability{}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
-
-	// 提交事务
-	if err = tx.Commit().Error; err != nil {
-		return err
-	}
-
-	// 重新排序ID
-	return ReorderChannelIds()
+	err = channel.DeleteAbilities()
+	return err
 }
 
 var channelStatusLock sync.Mutex
@@ -461,61 +426,13 @@ func updateChannelUsedQuota(id int, quota int) {
 }
 
 func DeleteChannelByStatus(status int64) (int64, error) {
-	tx := DB.Begin()
-	if tx.Error != nil {
-		return 0, tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	result := tx.Where("status = ?", status).Delete(&Channel{})
-	if result.Error != nil {
-		tx.Rollback()
-		return 0, result.Error
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return 0, err
-	}
-
-	// 重新排序ID
-	if err := ReorderChannelIds(); err != nil {
-		return result.RowsAffected, err
-	}
-
-	return result.RowsAffected, nil
+	result := DB.Where("status = ?", status).Delete(&Channel{})
+	return result.RowsAffected, result.Error
 }
 
 func DeleteDisabledChannel() (int64, error) {
-	tx := DB.Begin()
-	if tx.Error != nil {
-		return 0, tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	result := tx.Where("status = ? or status = ?", common.ChannelStatusAutoDisabled, common.ChannelStatusManuallyDisabled).Delete(&Channel{})
-	if result.Error != nil {
-		tx.Rollback()
-		return 0, result.Error
-	}
-
-	if err := tx.Commit().Error; err != nil {
-		return 0, err
-	}
-
-	// 重新排序ID
-	if err := ReorderChannelIds(); err != nil {
-		return result.RowsAffected, err
-	}
-
-	return result.RowsAffected, nil
+	result := DB.Where("status = ? or status = ?", common.ChannelStatusAutoDisabled, common.ChannelStatusManuallyDisabled).Delete(&Channel{})
+	return result.RowsAffected, result.Error
 }
 
 func GetPaginatedTags(offset int, limit int) ([]*string, error) {
@@ -642,116 +559,5 @@ func BatchSetChannelTag(ids []int, tag *string) error {
 	}
 
 	// 提交事务
-	return tx.Commit().Error
-}
-
-func ReorderChannelIds() error {
-	tx := DB.Begin()
-	if tx.Error != nil {
-		return tx.Error
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-		}
-	}()
-
-	var err error
-	if common.UsingPostgreSQL {
-		// PostgreSQL version
-		// 创建临时表
-		if err = tx.Exec(`CREATE TEMPORARY TABLE temp_channel_ids AS 
-			SELECT id as old_id, ROW_NUMBER() OVER (ORDER BY id) as new_id 
-			FROM channels`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 更新channels表
-		if err = tx.Exec(`UPDATE channels 
-			SET id = temp.new_id 
-			FROM temp_channel_ids temp 
-			WHERE channels.id = temp.old_id`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 更新abilities表
-		if err = tx.Exec(`UPDATE abilities 
-			SET channel_id = temp.new_id 
-			FROM temp_channel_ids temp 
-			WHERE abilities.channel_id = temp.old_id`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 删除临时表
-		if err = tx.Exec(`DROP TABLE temp_channel_ids`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	} else if common.UsingMySQL {
-		// MySQL version
-		// 创建临时表
-		if err = tx.Exec(`CREATE TEMPORARY TABLE temp_channel_ids 
-			SELECT id as old_id, (@row_number:=@row_number + 1) as new_id 
-			FROM channels, (SELECT @row_number:=0) as t 
-			ORDER BY id`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 更新channels表
-		if err = tx.Exec(`UPDATE channels, temp_channel_ids 
-			SET channels.id = temp_channel_ids.new_id 
-			WHERE channels.id = temp_channel_ids.old_id`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 更新abilities表
-		if err = tx.Exec(`UPDATE abilities, temp_channel_ids 
-			SET abilities.channel_id = temp_channel_ids.new_id 
-			WHERE abilities.channel_id = temp_channel_ids.old_id`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 删除临时表
-		if err = tx.Exec(`DROP TEMPORARY TABLE IF EXISTS temp_channel_ids`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	} else if common.UsingSQLite {
-		// SQLite version
-		// 创建临时表
-		if err = tx.Exec(`CREATE TEMPORARY TABLE temp_channel_ids AS 
-			SELECT id as old_id, ROW_NUMBER() OVER (ORDER BY id) as new_id 
-			FROM channels`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 更新channels表
-		if err = tx.Exec(`UPDATE channels 
-			SET id = (SELECT new_id FROM temp_channel_ids WHERE old_id = channels.id)`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 更新abilities表
-		if err = tx.Exec(`UPDATE abilities 
-			SET channel_id = (SELECT new_id FROM temp_channel_ids WHERE old_id = channel_id)`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-
-		// 删除临时表
-		if err = tx.Exec(`DROP TABLE temp_channel_ids`).Error; err != nil {
-			tx.Rollback()
-			return err
-		}
-	}
-
 	return tx.Commit().Error
 }
