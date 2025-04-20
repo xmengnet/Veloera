@@ -849,10 +849,25 @@ const LogsTable = () => {
 
   const setLogsFormat = (logs) => {
     let expandDatesLocal = {};
+    // Calculate total token counts for currently displayed logs
+    let totalTokens = 0;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    
     for (let i = 0; i < logs.length; i++) {
       logs[i].timestamp2string = timestamp2string(logs[i].created_at);
       logs[i].key = logs[i].id;
       let other = getLogOther(logs[i].other);
+      
+      // Sum up tokens from current logs
+      if (logs[i].type === 0 || logs[i].type === 2) {
+        const promptTokens = parseInt(logs[i].prompt_tokens) || 0;
+        const completionTokens = parseInt(logs[i].completion_tokens) || 0;
+        totalInputTokens += promptTokens;
+        totalOutputTokens += completionTokens;
+        totalTokens += promptTokens + completionTokens;
+      }
+      
       let expandDataLocal = [];
       if (isAdmin()) {
         // let content = '渠道：' + logs[i].channel;
@@ -1001,6 +1016,14 @@ const LogsTable = () => {
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }
 
+    // Update state with token sums
+    setStat(prevStat => ({
+      ...prevStat,
+      token_total: totalTokens,
+      token_input: totalInputTokens,
+      token_output: totalOutputTokens
+    }));
+    
     setExpandData(expandDatesLocal);
     setLogs(logs);
   };
@@ -1097,6 +1120,42 @@ const LogsTable = () => {
                 }}
               >
                 {t('消耗额度')}: {renderQuota(stat.quota)}
+              </Tag>
+              <Tag
+                color='green'
+                size='large'
+                style={{
+                  padding: 15,
+                  borderRadius: '8px',
+                  fontWeight: 500,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                {t('总Token')}: {stat.token_total || 0}
+              </Tag>
+              <Tag
+                color='orange'
+                size='large'
+                style={{
+                  padding: 15,
+                  borderRadius: '8px',
+                  fontWeight: 500,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                {t('输入Token')}: {stat.token_input || 0}
+              </Tag>
+              <Tag
+                color='purple'
+                size='large'
+                style={{
+                  padding: 15,
+                  borderRadius: '8px',
+                  fontWeight: 500,
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                }}
+              >
+                {t('输出Token')}: {stat.token_output || 0}
               </Tag>
               <Tag
                 color='pink'
