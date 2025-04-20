@@ -68,3 +68,17 @@ func StringToByteSlice(s string) []byte {
 	tmp2 := [3]uintptr{tmp1[0], tmp1[1], tmp1[1]}
 	return *(*[]byte)(unsafe.Pointer(&tmp2))
 }
+
+// IsEmptyOrWhitespace checks if a string is empty or contains only whitespace characters
+func IsEmptyOrWhitespace(s string) bool {
+	if s == "" {
+		return true
+	}
+	
+	for _, char := range s {
+		if char != ' ' && char != '\t' && char != '\n' && char != '\r' {
+			return false
+		}
+	}
+	return true
+}

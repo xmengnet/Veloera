@@ -179,8 +179,22 @@ func OaiStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 		common.SysError("error processing tokens: " + err.Error())
 	}
 
+	// 检查是否为空回复或只有空格的回复，如果是则不计费
+	responseText := responseTextBuilder.String()
+	if common.IsEmptyOrWhitespace(responseText) && toolCount == 0 {
+		// 空回复或全是空格不计费，返回零使用量（而不是只设置CompletionTokens为0）
+		zeroUsage := &dto.Usage{
+			PromptTokens:     0,
+			CompletionTokens: 0,
+			TotalTokens:      0,
+		}
+		// 直接返回空使用量，结束处理
+		handleFinalResponse(c, info, lastStreamData, responseId, createAt, model, systemFingerprint, zeroUsage, false)
+		return nil, zeroUsage
+	}
+
 	if !containStreamUsage {
-		usage, _ = service.ResponseText2Usage(responseTextBuilder.String(), info.UpstreamModelName, info.PromptTokens)
+		usage, _ = service.ResponseText2Usage(responseText, info.UpstreamModelName, info.PromptTokens)
 		usage.CompletionTokens += toolCount * 7
 	} else {
 		if info.ChannelType == common.ChannelTypeDeepSeek {
@@ -244,6 +258,26 @@ func OpenaiHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayI
 		common.SysError("error copying response body: " + err.Error())
 	}
 	resp.Body.Close()
+	// 检查响应是否为空或只包含空格
+	isEmptyResponse := true
+	for _, choice := range simpleResponse.Choices {
+		content := choice.Message.StringContent() + choice.Message.ReasoningContent + choice.Message.Reasoning
+		if !common.IsEmptyOrWhitespace(content) {
+			isEmptyResponse = false
+			break
+		}
+	}
+	
+	// 如果响应是空的或只有空格，返回零使用量
+	if isEmptyResponse {
+		zeroUsage := &dto.Usage{
+			PromptTokens:     0,
+			CompletionTokens: 0,
+			TotalTokens:      0,
+		}
+		return nil, zeroUsage
+	}
+	
 	if simpleResponse.Usage.TotalTokens == 0 || (simpleResponse.Usage.PromptTokens == 0 && simpleResponse.Usage.CompletionTokens == 0) {
 		completionTokens := 0
 		for _, choice := range simpleResponse.Choices {
