@@ -196,35 +196,53 @@ func OaiStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 }
 
 func OpenaiHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
-	var simpleResponse dto.ChatCompletionResponse
+	var simpleResponse dto.OpenAITextResponse
 	responseBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return service.OpenAIErrorWrapper(err, "read_response_body_failed", resp.StatusCode), nil
+		return service.OpenAIErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError), nil
 	}
-	err = json.Unmarshal(responseBody, &simpleResponse)
+	err = resp.Body.Close()
 	if err != nil {
-		return service.OpenAIErrorWrapper(err, "unmarshal_response_body_failed", resp.StatusCode), nil
+		return service.OpenAIErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
+	}
+	err = common.DecodeJson(responseBody, &simpleResponse)
+	if err != nil {
+		return service.OpenAIErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
+	}
+	if simpleResponse.Error != nil && simpleResponse.Error.Type != "" {
+		return &dto.OpenAIErrorWithStatusCode{
+			Error:      *simpleResponse.Error,
+			StatusCode: resp.StatusCode,
+		}, nil
 	}
 
-	// 检查是否为空回复
-	isEmptyResponse := true
-	for _, choice := range simpleResponse.Choices {
-		content := choice.Message.StringContent() + choice.Message.ReasoningContent + choice.Message.Reasoning
-		if len(strings.TrimSpace(content)) > 0 {
-			isEmptyResponse = false
-			break
+	switch info.RelayFormat {
+	case relaycommon.RelayFormatOpenAI:
+		break
+	case relaycommon.RelayFormatClaude:
+		claudeResp := service.ResponseOpenAI2Claude(&simpleResponse, info)
+		claudeRespStr, err := json.Marshal(claudeResp)
+		if err != nil {
+			return service.OpenAIErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
 		}
+		responseBody = claudeRespStr
 	}
 
-	// 如果是空回复，返回零使用量
-	if isEmptyResponse {
-		return nil, &dto.Usage{
-			PromptTokens:     0,
-			CompletionTokens: 0,
-			TotalTokens:      0,
-		}
+	// Reset response body
+	resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
+	// We shouldn't set the header before we parse the response body, because the parse part may fail.
+	// And then we will have to send an error response, but in this case, the header has already been set.
+	// So the httpClient will be confused by the response.
+	// For example, Postman will report error, and we cannot check the response at all.
+	for k, v := range resp.Header {
+		c.Writer.Header().Set(k, v[0])
 	}
-
+	c.Writer.WriteHeader(resp.StatusCode)
+	_, err = io.Copy(c.Writer, resp.Body)
+	if err != nil {
+		//return service.OpenAIErrorWrapper(err, "copy_response_body_failed", http.StatusInternalServerError), nil
+		common.SysError("error copying response body: " + err.Error())
+	}
 	resp.Body.Close()
 	if simpleResponse.Usage.TotalTokens == 0 || (simpleResponse.Usage.PromptTokens == 0 && simpleResponse.Usage.CompletionTokens == 0) {
 		completionTokens := 0
