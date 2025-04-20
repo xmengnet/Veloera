@@ -7,6 +7,7 @@ import (
 	"one-api/common"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
@@ -40,6 +41,7 @@ type User struct {
 	DeletedAt        gorm.DeletedAt `gorm:"index"`
 	LinuxDOId        string         `json:"linux_do_id" gorm:"column:linux_do_id;index"`
 	Setting          string         `json:"setting" gorm:"type:text;column:setting"`
+	LastCheckInTime  *time.Time     `json:"last_check_in_time" gorm:"column:last_check_in_time"` // 上次签到时间
 }
 
 func (user *User) ToBaseUser() *UserBase {
@@ -816,4 +818,83 @@ func RootUserExists() bool {
 		return false
 	}
 	return true
+}
+
+// CheckIn performs a check-in for the user and rewards them with tokens
+func (user *User) CheckIn(minQuota int, maxQuota int) (rewarded int, err error) {
+	// Start transaction
+	tx := DB.Begin()
+	if tx.Error != nil {
+		return 0, tx.Error
+	}
+	defer tx.Rollback()
+
+	// Lock the user row for update
+	err = tx.Set("gorm:query_option", "FOR UPDATE").First(&user, user.Id).Error
+	if err != nil {
+		return 0, err
+	}
+
+	// Check if user can check in today
+	now := time.Now()
+	if user.LastCheckInTime != nil {
+		lastCheckIn := *user.LastCheckInTime
+		if lastCheckIn.Year() == now.Year() && lastCheckIn.Month() == now.Month() && lastCheckIn.Day() == now.Day() {
+			return 0, errors.New("你今天已经签到过了")
+		}
+	}
+
+	// Calculate reward amount
+	reward := minQuota
+	if maxQuota > minQuota {
+		// Generate random reward between min and max
+		reward = minQuota + common.RandomInt(maxQuota-minQuota+1)
+	}
+
+	// Update user data
+	user.LastCheckInTime = &now
+	user.Quota += reward
+
+	// Save changes
+	if err = tx.Save(user).Error; err != nil {
+		return 0, err
+	}
+
+	// Record this activity in log
+	logErr := tx.Create(&Log{
+		UserId:    user.Id,
+		Type:      LogTypeSystem,
+		Content:   fmt.Sprintf("签到奖励 %s", common.LogQuota(reward)),
+		CreatedAt: common.GetTimestamp(),
+	}).Error
+
+	if logErr != nil {
+		common.SysError("failed to record check-in log: " + logErr.Error())
+	}
+
+	// Commit transaction
+	if err = tx.Commit().Error; err != nil {
+		return 0, err
+	}
+
+	// Update cache
+	if err = updateUserQuotaCache(user.Id, user.Quota); err != nil {
+		common.SysError("failed to update user quota cache after check-in: " + err.Error())
+	}
+
+	return reward, nil
+}
+
+// CanCheckInToday checks if the user can check in today
+func (user *User) CanCheckInToday() bool {
+	if user.LastCheckInTime == nil {
+		return true
+	}
+	
+	now := time.Now()
+	lastCheckIn := *user.LastCheckInTime
+	
+	return !(lastCheckIn.Year() == now.Year() && 
+	         lastCheckIn.Month() == now.Month() && 
+	         lastCheckIn.Day() == now.Day())
 }

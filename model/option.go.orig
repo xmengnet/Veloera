@@ -223,12 +223,6 @@ func updateOptionMap(key string, value string) (err error) {
 			common.AutomaticEnableChannelEnabled = boolValue
 		case "LogConsumeEnabled":
 			common.LogConsumeEnabled = boolValue
-		case "CheckInEnabled":
-			common.CheckInEnabled = boolValue
-		case "CheckInQuota":
-			common.CheckInQuota, _ = strconv.Atoi(value)
-		case "CheckInMaxQuota":
-			common.CheckInMaxQuota, _ = strconv.Atoi(value)
 		case "DisplayInCurrencyEnabled":
 			common.DisplayInCurrencyEnabled = boolValue
 		case "DisplayTokenStatEnabled":

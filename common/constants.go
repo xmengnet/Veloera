@@ -101,6 +101,10 @@ var PreConsumedQuota = 500
 
 var RetryTimes = 0
 
+var CheckInEnabled = false
+var CheckInQuota = 1000
+var CheckInMaxQuota = 0
+
 //var RootUserEmail = ""
 
 var IsMasterNode bool

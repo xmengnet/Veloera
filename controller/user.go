@@ -1044,3 +1044,87 @@ func UpdateUserSetting(c *gin.Context) {
 		"message": "设置已更新",
 	})
 }
+
+// CheckInStatus returns whether a user can check in today
+func CheckInStatus(c *gin.Context) {
+	id := c.GetInt("id")
+	user, err := model.GetUserById(id, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"can_check_in": user.CanCheckInToday(),
+		},
+	})
+}
+
+// CheckIn performs a daily check-in for the user
+func CheckIn(c *gin.Context) {
+	// Get check-in settings
+	common.OptionMapRWMutex.RLock()
+	checkInEnabled := common.OptionMap["CheckInEnabled"] == "true"
+	checkInQuotaStr := common.OptionMap["CheckInQuota"]
+	checkInMaxQuotaStr := common.OptionMap["CheckInMaxQuota"]
+	common.OptionMapRWMutex.RUnlock()
+	
+	if !checkInEnabled {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "签到功能未启用",
+		})
+		return
+	}
+
+	checkInQuota, err := strconv.Atoi(checkInQuotaStr)
+	if err != nil || checkInQuota <= 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "签到额度配置错误",
+		})
+		return
+	}
+
+	checkInMaxQuota := checkInQuota
+	if checkInMaxQuotaStr != "" {
+		maxQuota, err := strconv.Atoi(checkInMaxQuotaStr)
+		if err == nil && maxQuota > checkInQuota {
+			checkInMaxQuota = maxQuota
+		}
+	}
+
+	// Get user and perform check-in
+	id := c.GetInt("id")
+	user, err := model.GetUserById(id, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	reward, err := user.CheckIn(checkInQuota, checkInMaxQuota)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "签到成功",
+		"data": gin.H{
+			"quota": reward,
+		},
+	})
+}
