@@ -1013,6 +1013,152 @@ const LogsTable = () => {
           });
         }
       }
+      // 添加上下文、输入和输出内容
+      if (logs[i].type === 2) { // 消费类型
+        let other = getLogOther(logs[i].other);
+        
+        // 添加系统提示信息（如果有）
+        if (other?.system_prompt) {
+          expandDataLocal.push({
+            key: t('系统提示'),
+            value: (
+              <Paragraph
+                ellipsis={{
+                  rows: 3,
+                  expandable: true,
+                  collapsible: true,
+                  collapseText: t('收起'),
+                  expandText: t('展开'),
+                }}
+                style={{ maxWidth: '100%', whiteSpace: 'pre-wrap' }}
+              >
+                {other.system_prompt}
+              </Paragraph>
+            ),
+          });
+        }
+        
+        // 添加上下文信息（如果有）
+        if (other?.context) {
+          let contextStr = "";
+          
+          if (Array.isArray(other.context)) {
+            // 如果是消息数组，格式化显示每条消息
+            if (other.context.length > 0) {
+              contextStr = other.context.map(msg => {
+                if (typeof msg === 'object' && msg !== null && msg.role && msg.content) {
+                  // 根据角色格式化消息
+                  let roleDisplay = '未知';
+                  switch(msg.role) {
+                    case 'user':
+                      roleDisplay = '用户';
+                      break;
+                    case 'assistant':
+                      roleDisplay = '助手';
+                      break;
+                    case 'system':
+                      roleDisplay = '系统';
+                      break;
+                    default:
+                      roleDisplay = msg.role;
+                  }
+                  return `${roleDisplay}消息: ${msg.content}`;
+                } else {
+                  // 无法解析的对象
+                  return JSON.stringify(msg, null, 2);
+                }
+              }).join('\n\n'); // 使用双换行分隔不同消息，提高可读性
+            } else {
+              contextStr = "空上下文";
+            }
+          } else if (typeof other.context === 'string') {
+            contextStr = other.context;
+          } else {
+            contextStr = JSON.stringify(other.context, null, 2);
+          }
+          
+          expandDataLocal.push({
+            key: t('上下文'),
+            value: (
+              <Paragraph
+                ellipsis={{
+                  rows: 3,
+                  expandable: true,
+                  collapsible: true,
+                  collapseText: t('收起'),
+                  expandText: t('展开'),
+                }}
+                style={{ maxWidth: '100%', whiteSpace: 'pre-wrap' }}
+              >
+                {contextStr}
+              </Paragraph>
+            ),
+          });
+        }
+        
+        // 添加输入内容
+        if (other?.input_content) {
+          // 格式化用户输入消息
+          let inputContent = "";
+          if (typeof other.input_content === 'object' && other.input_content !== null) {
+            if (other.input_content.role === 'user' && other.input_content.content) {
+              // 用户消息格式化显示
+              inputContent = `用户消息: ${other.input_content.content}`;
+            } else if (other.input_content.content) {
+              // 其他角色但有content
+              const role = other.input_content.role || '未知';
+              inputContent = `${role}消息: ${other.input_content.content}`;
+            } else {
+              // 无法解析的对象
+              inputContent = JSON.stringify(other.input_content, null, 2);
+            }
+          } else if (typeof other.input_content === 'string') {
+            inputContent = other.input_content;
+          } else {
+            inputContent = JSON.stringify(other.input_content, null, 2);
+          }
+          
+          expandDataLocal.push({
+            key: t('输入'),
+            value: (
+              <Paragraph
+                ellipsis={{
+                  rows: 4,
+                  expandable: true,
+                  collapsible: true,
+                  collapseText: t('收起'),
+                  expandText: t('展开'),
+                }}
+                style={{ maxWidth: '100%', whiteSpace: 'pre-wrap' }}
+              >
+                {inputContent}
+              </Paragraph>
+            ),
+          });
+        }
+        
+        // 添加输出内容
+        if (other?.output_content) {
+          expandDataLocal.push({
+            key: t('输出'),
+            value: (
+              <Paragraph
+                ellipsis={{
+                  rows: 5,
+                  expandable: true,
+                  collapsible: true,
+                  collapseText: t('收起'),
+                  expandText: t('展开'),
+                }}
+                style={{ maxWidth: '100%', whiteSpace: 'pre-wrap' }}
+              >
+                {other.output_content}
+              </Paragraph>
+            ),
+          });
+        }
+      }
+      
       expandDatesLocal[logs[i].key] = expandDataLocal;
     }
 

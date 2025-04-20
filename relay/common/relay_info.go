@@ -87,6 +87,8 @@ type RelayInfo struct {
 	UserQuota            int
 	RelayFormat          string
 	SendResponseCount    int
+	PromptMessages       interface{} // 保存请求的消息内容
+	Other                map[string]interface{} // 用于存储额外信息，如输入输出内容
 	ThinkingContentInfo
 	*ClaudeConvertInfo
 	*RerankerInfo
@@ -177,6 +179,7 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 		Organization:   c.GetString("channel_organization"),
 		ChannelSetting: channelSetting,
 		ParamOverride:  paramOverride,
+		Other:          make(map[string]interface{}),
 		RelayFormat:    RelayFormatOpenAI,
 		ThinkingContentInfo: ThinkingContentInfo{
 			IsFirstThinkingContent:  true,

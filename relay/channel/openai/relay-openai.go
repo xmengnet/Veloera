@@ -181,6 +181,71 @@ func OaiStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.Rel
 
 	// 检查是否为空回复或只有空格的回复，如果是则不计费
 	responseText := responseTextBuilder.String()
+	// 保存到 info 中，供日志记录使用
+	if info.Other == nil {
+		info.Other = make(map[string]interface{})
+	}
+	
+	// 提取输入内容（最后一条用户消息）和上下文（其他所有非system消息）
+	if messages, ok := info.PromptMessages.([]interface{}); ok && len(messages) > 0 {
+		var systemPrompt string
+		var contextMessages []interface{}
+		var userMessage interface{}
+		var lastUserMessageIndex = -1
+		
+		// 先找出最后一条user消息的索引
+		for i := len(messages) - 1; i >= 0; i-- {
+			if msgMap, ok := messages[i].(map[string]interface{}); ok {
+				if role, exists := msgMap["role"]; exists && role == "user" {
+					lastUserMessageIndex = i
+					break
+				}
+			}
+		}
+		
+		// 再遍历处理所有消息
+		for i, msg := range messages {
+			if msgMap, ok := msg.(map[string]interface{}); ok {
+				if role, exists := msgMap["role"]; exists {
+					if role == "system" {
+						// 如果是system消息，保存其内容
+						if content, hasContent := msgMap["content"]; hasContent && content != nil {
+							if systemPrompt == "" {
+								systemPrompt = fmt.Sprintf("%v", content)
+							} else {
+								systemPrompt += "\n" + fmt.Sprintf("%v", content)
+							}
+						}
+					} else if i == lastUserMessageIndex {
+						// 如果是最后一条user消息
+						userMessage = msgMap
+					} else {
+						// 其他非system消息作为上下文
+						contextMessages = append(contextMessages, msgMap)
+					}
+				}
+			}
+		}
+		
+		// 保存处理后的数据
+		if systemPrompt != "" {
+			info.Other["system_prompt"] = systemPrompt
+		}
+		info.Other["context"] = contextMessages
+		if userMessage != nil {
+			info.Other["input_content"] = userMessage
+		} else {
+			// 如果没有找到user消息，保存最后一条消息作为输入
+			if len(messages) > 0 {
+				info.Other["input_content"] = messages[len(messages)-1]
+			}
+		}
+	} else {
+		info.Other["input_content"] = info.PromptMessages // 备用方案，保存全部输入内容
+	}
+	
+	info.Other["output_content"] = responseText // 保存输出内容
+	
 	if common.IsEmptyOrWhitespace(responseText) && toolCount == 0 {
 		// 空回复或全是空格不计费，返回零使用量（而不是只设置CompletionTokens为0）
 		zeroUsage := &dto.Usage{
@@ -229,6 +294,76 @@ func OpenaiHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayI
 			StatusCode: resp.StatusCode,
 		}, nil
 	}
+
+	// 保存输入输出内容到 info 中，供日志记录使用
+	if info.Other == nil {
+		info.Other = make(map[string]interface{})
+	}
+	
+	// 提取输入内容（最后一条用户消息）和上下文（其他所有非system消息）
+	if messages, ok := info.PromptMessages.([]interface{}); ok && len(messages) > 0 {
+		var systemPrompt string
+		var contextMessages []interface{}
+		var userMessage interface{}
+		var lastUserMessageIndex = -1
+		
+		// 先找出最后一条user消息的索引
+		for i := len(messages) - 1; i >= 0; i-- {
+			if msgMap, ok := messages[i].(map[string]interface{}); ok {
+				if role, exists := msgMap["role"]; exists && role == "user" {
+					lastUserMessageIndex = i
+					break
+				}
+			}
+		}
+		
+		// 再遍历处理所有消息
+		for i, msg := range messages {
+			if msgMap, ok := msg.(map[string]interface{}); ok {
+				if role, exists := msgMap["role"]; exists {
+					if role == "system" {
+						// 如果是system消息，保存其内容
+						if content, hasContent := msgMap["content"]; hasContent && content != nil {
+							if systemPrompt == "" {
+								systemPrompt = fmt.Sprintf("%v", content)
+							} else {
+								systemPrompt += "\n" + fmt.Sprintf("%v", content)
+							}
+						}
+					} else if i == lastUserMessageIndex {
+						// 如果是最后一条user消息
+						userMessage = msgMap
+					} else {
+						// 其他非system消息作为上下文
+						contextMessages = append(contextMessages, msgMap)
+					}
+				}
+			}
+		}
+		
+		// 保存处理后的数据
+		if systemPrompt != "" {
+			info.Other["system_prompt"] = systemPrompt
+		}
+		info.Other["context"] = contextMessages
+		if userMessage != nil {
+			info.Other["input_content"] = userMessage
+		} else {
+			// 如果没有找到user消息，保存最后一条消息作为输入
+			if len(messages) > 0 {
+				info.Other["input_content"] = messages[len(messages)-1]
+			}
+		}
+	} else {
+		info.Other["input_content"] = info.PromptMessages // 备用方案，保存全部输入内容
+	}
+	
+	// 提取输出内容
+	var outputContent string
+	for _, choice := range simpleResponse.Choices {
+		outputContent += choice.Message.StringContent() + choice.Message.ReasoningContent + choice.Message.Reasoning
+	}
+	info.Other["output_content"] = outputContent // 保存输出内容
 
 	switch info.RelayFormat {
 	case relaycommon.RelayFormatOpenAI:

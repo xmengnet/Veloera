@@ -66,6 +66,15 @@ func getAndValidateTextRequest(c *gin.Context, relayInfo *relaycommon.RelayInfo)
 		}
 	}
 	relayInfo.IsStream = textRequest.Stream
+	
+	// 保存请求消息内容，用于记录日志
+	switch relayInfo.RelayMode {
+	case relayconstant.RelayModeChatCompletions:
+		relayInfo.PromptMessages = textRequest.Messages
+	case relayconstant.RelayModeCompletions:
+		relayInfo.PromptMessages = textRequest.Prompt
+	}
+	
 	return textRequest, nil
 }
 
