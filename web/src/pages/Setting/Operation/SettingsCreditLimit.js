@@ -59,6 +59,63 @@ export default function SettingsCreditLimit(props) {
       });
   }
 
+  // 添加一个专门用于签到设置的保存函数
+  function onSubmitCheckIn() {
+    // 只比较签到相关的设置
+    const checkInKeys = ['CheckInEnabled', 'CheckInQuota', 'CheckInMaxQuota'];
+    const updateArray = checkInKeys.filter(key => {
+      const oldValue = inputsRow[key];
+      const newValue = inputs[key];
+      return String(oldValue) !== String(newValue);
+    }).map(key => ({
+      key,
+      oldValue: inputsRow[key],
+      newValue: inputs[key]
+    }));
+
+    if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
+    
+    const requestQueue = updateArray.map((item) => {
+      let value = '';
+      if (typeof inputs[item.key] === 'boolean') {
+        value = String(inputs[item.key]);
+      } else {
+        value = inputs[item.key];
+      }
+      return API.put('/api/option/', {
+        key: item.key,
+        value,
+      });
+    });
+
+    setLoading(true);
+    Promise.all(requestQueue)
+      .then((res) => {
+        if (requestQueue.length === 1) {
+          if (res.includes(undefined)) return;
+        } else if (requestQueue.length > 1) {
+          if (res.includes(undefined))
+            return showError(t('部分保存失败，请重试'));
+        }
+        showSuccess(t('保存成功'));
+        // 更新 inputsRow 以反映新的状态
+        setInputsRow(prev => ({
+          ...prev,
+          ...updateArray.reduce((acc, curr) => ({
+            ...acc,
+            [curr.key]: inputs[curr.key]
+          }), {})
+        }));
+        props.refresh();
+      })
+      .catch(() => {
+        showError(t('保存失败，请重试'));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }
+
   useEffect(() => {
     const currentInputs = {};
     for (let key in props.options) {
@@ -130,7 +187,7 @@ export default function SettingsCreditLimit(props) {
               </Col>
             </Row>
             <Row>
-              <Button size='default' onClick={onSubmit} style={{ marginBottom: 20 }}>
+              <Button size='default' onClick={onSubmitCheckIn} style={{ marginBottom: 20 }}>
                 {t('保存签到设置')}
               </Button>
             </Row>
