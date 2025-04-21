@@ -9,17 +9,28 @@ import {
   showWarning,
 } from '../../../helpers';
 
-export default function SettingsCreditLimit(props) {
+export default function SettingsCheckIn(props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
-    QuotaForNewUser: '',
-    PreConsumedQuota: '',
-    QuotaForInviter: '',
-    QuotaForInvitee: '',
+    CheckInEnabled: false,
+    CheckInQuota: '',
+    CheckInMaxQuota: '',
   });
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
+
+  useEffect(() => {
+    const currentInputs = {};
+    for (let key in props.options) {
+      if (Object.keys(inputs).includes(key)) {
+        currentInputs[key] = props.options[key];
+      }
+    }
+    setInputs(currentInputs);
+    setInputsRow(structuredClone(currentInputs));
+    refForm.current.setValues(currentInputs);
+  }, [props.options]);
 
   function handleFieldChange(fieldName) {
     return (value) => {
@@ -33,6 +44,7 @@ export default function SettingsCreditLimit(props) {
   function onSubmit() {
     const updateArray = compareObjects(inputs, inputsRow);
     if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
+    
     const requestQueue = updateArray.map((item) => {
       let value = '';
       if (typeof inputs[item.key] === 'boolean') {
@@ -45,6 +57,7 @@ export default function SettingsCreditLimit(props) {
         value,
       });
     });
+
     setLoading(true);
     Promise.all(requestQueue)
       .then((res) => {
@@ -65,18 +78,6 @@ export default function SettingsCreditLimit(props) {
       });
   }
 
-
-  useEffect(() => {
-    const currentInputs = {};
-    for (let key in props.options) {
-      if (Object.keys(inputs).includes(key)) {
-        currentInputs[key] = props.options[key];
-      }
-    }
-    setInputs(currentInputs);
-    setInputsRow(structuredClone(currentInputs));
-    refForm.current.setValues(currentInputs);
-  }, [props.options]);
   return (
     <>
       <Spin spinning={loading}>
@@ -85,62 +86,45 @@ export default function SettingsCreditLimit(props) {
           getFormApi={(formAPI) => (refForm.current = formAPI)}
           style={{ marginBottom: 15 }}
         >
-          <Form.Section text={t('额度设置')}>
+          <Form.Section text={t('签到设置')}>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Switch
+                  label={t('启用签到功能')}
+                  field={'CheckInEnabled'}
+                  onChange={handleFieldChange('CheckInEnabled')}
+                />
+              </Col>
+            </Row>
             <Row gutter={16}>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>
                 <Form.InputNumber
-                  label={t('新用户初始额度')}
-                  field={'QuotaForNewUser'}
-                  step={1}
+                  label={t('每日签到额度')}
+                  field={'CheckInQuota'}
+                  step={100}
                   min={0}
                   suffix={'Token'}
-                  placeholder={''}
-                  onChange={handleFieldChange('QuotaForNewUser')}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('请求预扣费额度')}
-                  field={'PreConsumedQuota'}
-                  step={1}
-                  min={0}
-                  suffix={'Token'}
-                  extraText={t('请求结束后多退少补')}
-                  placeholder={''}
-                  onChange={handleFieldChange('PreConsumedQuota')}
-                />
-              </Col>
-              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
-                <Form.InputNumber
-                  label={t('邀请新用户奖励额度')}
-                  field={'QuotaForInviter'}
-                  step={1}
-                  min={0}
-                  suffix={'Token'}
-                  extraText={''}
-                  placeholder={t('例如：2000')}
-                  onChange={handleFieldChange('QuotaForInviter')}
-                />
-              </Col>
-            </Row>
-            <Row>
-              <Col xs={24} sm={12} md={8} lg={8} xl={6}>
-                <Form.InputNumber
-                  label={t('新用户使用邀请码奖励额度')}
-                  field={'QuotaForInvitee'}
-                  step={1}
-                  min={0}
-                  suffix={'Token'}
-                  extraText={''}
+                  extraText={t('每日签到可获得的固定额度，或随机额度的最小值')}
                   placeholder={t('例如：1000')}
-                  onChange={handleFieldChange('QuotaForInvitee')}
+                  onChange={handleFieldChange('CheckInQuota')}
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.InputNumber
+                  label={t('每日签到最高额度')}
+                  field={'CheckInMaxQuota'}
+                  step={100}
+                  min={0}
+                  suffix={'Token'}
+                  extraText={t('可选。设置后，签到额度将在最小值和最高值之间随机')}
+                  placeholder={t('例如：2000')}
+                  onChange={handleFieldChange('CheckInMaxQuota')}
                 />
               </Col>
             </Row>
-
             <Row>
-              <Button size='default' onClick={onSubmit}>
-                {t('保存额度设置')}
+              <Button size='default' onClick={onSubmit} style={{ marginBottom: 20 }}>
+                {t('保存签到设置')}
               </Button>
             </Row>
           </Form.Section>
