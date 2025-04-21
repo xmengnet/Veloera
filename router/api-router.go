@@ -121,6 +121,10 @@ func SetApiRouter(router *gin.Engine) {
 		{
 			redemptionRoute.GET("/", controller.GetAllRedemptions)
 			redemptionRoute.GET("/search", controller.SearchRedemptions)
+			redemptionRoute.GET("/count-by-name", controller.CountRedemptionsByName)
+			redemptionRoute.DELETE("/delete-by-name", controller.DeleteRedemptionsByName)
+			redemptionRoute.PUT("/batch-disable", controller.BatchDisableRedemptions)
+			redemptionRoute.DELETE("/delete-disabled", controller.DeleteDisabledRedemptions)
 			redemptionRoute.GET("/:id", controller.GetRedemption)
 			redemptionRoute.POST("/", controller.AddRedemption)
 			redemptionRoute.PUT("/", controller.UpdateRedemption)

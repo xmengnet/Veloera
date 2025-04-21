@@ -216,3 +216,114 @@ func UpdateRedemption(c *gin.Context) {
 	})
 	return
 }
+
+// CountRedemptionsByName 根据名称统计兑换码数量
+func CountRedemptionsByName(c *gin.Context) {
+	name := c.Query("name")
+	if name == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "名称不能为空",
+		})
+		return
+	}
+	
+	count, err := model.CountRedemptionsByName(name)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    count,
+	})
+}
+
+// DeleteRedemptionsByName 根据名称批量删除兑换码
+func DeleteRedemptionsByName(c *gin.Context) {
+	name := c.Query("name")
+	if name == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "名称不能为空",
+		})
+		return
+	}
+	
+	count, err := model.DeleteRedemptionsByName(name)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    count,
+	})
+}
+
+// BatchDisableRedemptions 批量禁用兑换码
+func BatchDisableRedemptions(c *gin.Context) {
+	var requestData struct {
+		Ids []int `json:"ids"`
+	}
+	
+	err := c.ShouldBindJSON(&requestData)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	
+	if len(requestData.Ids) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "ID列表不能为空",
+		})
+		return
+	}
+	
+	count, err := model.BatchDisableRedemptions(requestData.Ids)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    count,
+	})
+}
+
+// DeleteDisabledRedemptions 删除所有已禁用的兑换码
+func DeleteDisabledRedemptions(c *gin.Context) {
+	count, err := model.DeleteDisabledRedemptions()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    count,
+	})
+}

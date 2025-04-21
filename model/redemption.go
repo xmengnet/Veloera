@@ -236,3 +236,50 @@ func DeleteRedemptionById(id int) (err error) {
 	}
 	return redemption.Delete()
 }
+
+// CountRedemptionsByName 根据名称统计兑换码数量
+func CountRedemptionsByName(name string) (count int64, err error) {
+	if name == "" {
+		return 0, errors.New("名称不能为空")
+	}
+	err = DB.Model(&Redemption{}).Where("name = ?", name).Count(&count).Error
+	return count, err
+}
+
+// DeleteRedemptionsByName 根据名称批量删除兑换码
+func DeleteRedemptionsByName(name string) (count int64, err error) {
+	if name == "" {
+		return 0, errors.New("名称不能为空")
+	}
+	
+	// 先计算数量
+	count, err = CountRedemptionsByName(name)
+	if err != nil {
+		return 0, err
+	}
+	
+	// 没有找到匹配的兑换码
+	if count == 0 {
+		return 0, nil
+	}
+	
+	// 执行删除
+	result := DB.Where("name = ?", name).Delete(&Redemption{})
+	return result.RowsAffected, result.Error
+}
+
+// BatchDisableRedemptions 批量禁用指定ID的兑换码
+func BatchDisableRedemptions(ids []int) (count int64, err error) {
+	if len(ids) == 0 {
+		return 0, errors.New("ID列表不能为空")
+	}
+	
+	result := DB.Model(&Redemption{}).Where("id IN ?", ids).Update("status", common.RedemptionCodeStatusDisabled)
+	return result.RowsAffected, result.Error
+}
+
+// DeleteDisabledRedemptions 删除所有已禁用的兑换码
+func DeleteDisabledRedemptions() (count int64, err error) {
+	result := DB.Where("status = ?", common.RedemptionCodeStatusDisabled).Delete(&Redemption{})
+	return result.RowsAffected, result.Error
+}

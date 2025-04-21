@@ -26,6 +26,118 @@ function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
 }
 
+// 批量删除兑换码模态框组件
+const BatchDeleteByNameModal = ({ visible, onClose, onConfirm }) => {
+  const { t } = useTranslation();
+  const [name, setName] = useState('');
+  const [count, setCount] = useState(0);
+  const [confirming, setConfirming] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
+  // 重置状态
+  const resetState = () => {
+    setName('');
+    setCount(0);
+    setConfirming(false);
+    setLoading(false);
+  };
+  
+  // 关闭模态框
+  const handleClose = () => {
+    resetState();
+    onClose();
+  };
+
+  // 当模态框显示状态变化时重置状态
+  useEffect(() => {
+    if (!visible) {
+      resetState();
+    }
+  }, [visible]);
+
+  // 根据名称查询兑换码数量
+  const checkRedemptionCount = async () => {
+    if (!name.trim()) return;
+    
+    setLoading(true);
+    try {
+      const res = await API.get(`/api/redemption/count-by-name?name=${encodeURIComponent(name.trim())}`);
+      if (res.data.success) {
+        setCount(res.data.data);
+        setConfirming(true);
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 确认删除
+  const handleConfirm = async () => {
+    if (count === 0) return;
+    
+    setLoading(true);
+    try {
+      const res = await API.delete(`/api/redemption/delete-by-name?name=${encodeURIComponent(name.trim())}`);
+      if (res.data.success) {
+        showSuccess(t('已成功删除 {{count}} 个兑换码', { count }));
+        onConfirm();
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      handleClose();
+    }
+  };
+
+  return (
+    <Modal
+      title={t('按名称批量删除兑换码')}
+      visible={visible}
+      onCancel={handleClose}
+      footer={
+        confirming ? (
+          <>
+            <Button onClick={handleClose}>{t('取消')}</Button>
+            <Button type="danger" loading={loading} onClick={handleConfirm}>
+              {t('确认删除 {{count}} 个兑换码', { count })}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button onClick={handleClose}>{t('取消')}</Button>
+            <Button type="primary" loading={loading} onClick={checkRedemptionCount}>
+              {t('查询数量')}
+            </Button>
+          </>
+        )
+      }
+    >
+      {confirming ? (
+        <div>
+          <p>{t('将删除名称为 "{{name}}" 的所有兑换码，共 {{count}} 个', { name, count })}</p>
+          <p style={{ color: 'red' }}>{t('此操作不可逆，请确认')}</p>
+        </div>
+      ) : (
+        <Form>
+          <Form.Input
+            field="name"
+            label={t('兑换码名称')}
+            placeholder={t('请输入要删除的兑换码名称')}
+            value={name}
+            onChange={setName}
+          />
+        </Form>
+      )}
+    </Modal>
+  );
+};
+
 const RedemptionsTable = () => {
   const { t } = useTranslation();
 
@@ -209,9 +321,62 @@ const RedemptionsTable = () => {
     id: undefined,
   });
   const [showEdit, setShowEdit] = useState(false);
-
+  const [showBatchDeleteByName, setShowBatchDeleteByName] = useState(false);
+  
   const closeEdit = () => {
     setShowEdit(false);
+  };
+  
+  // 批量禁用所选兑换码
+  const disableSelectedRedemptions = async () => {
+    if (selectedKeys.length === 0) {
+      showError(t('请至少选择一个兑换码！'));
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      // 获取所有选中的 ID
+      const ids = selectedKeys.map(item => item.id);
+      const res = await API.put('/api/redemption/batch-disable', { ids });
+      
+      if (res.data.success) {
+        showSuccess(t('成功禁用 {{count}} 个兑换码！', { count: res.data.data }));
+        await refresh();
+      } else {
+        showError(res.data.message);
+      }
+    } catch (error) {
+      showError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // 删除所有已禁用的兑换码
+  const deleteAllDisabledRedemptions = async () => {
+    Modal.confirm({
+      title: t('删除所有已禁用的兑换码'),
+      content: t('此操作将删除所有已禁用的兑换码，不可恢复，是否继续？'),
+      okType: 'danger',
+      onOk: async () => {
+        setLoading(true);
+        try {
+          const res = await API.delete('/api/redemption/delete-disabled');
+          
+          if (res.data.success) {
+            showSuccess(t('成功删除 {{count}} 个已禁用的兑换码！', { count: res.data.data }));
+            await refresh();
+          } else {
+            showError(res.data.message);
+          }
+        } catch (error) {
+          showError(error.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
   };
 
   const setRedemptionFormat = (redeptions) => {
@@ -385,6 +550,14 @@ const RedemptionsTable = () => {
         visiable={showEdit}
         handleClose={closeEdit}
       ></EditRedemption>
+      
+      {/* 批量删除兑换码模态框 */}
+      <BatchDeleteByNameModal 
+        visible={showBatchDeleteByName} 
+        onClose={() => setShowBatchDeleteByName(false)} 
+        onConfirm={refresh}
+      />
+      
       <Form
         onSubmit={() => {
           searchRedemptions(searchKeyword, activePage, pageSize).then();
@@ -419,6 +592,7 @@ const RedemptionsTable = () => {
         <Button
           label={t('复制所选兑换码')}
           type='warning'
+          style={{ marginRight: 8 }}
           onClick={async () => {
             if (selectedKeys.length === 0) {
               showError(t('请至少选择一个兑换码！'));
@@ -433,6 +607,26 @@ const RedemptionsTable = () => {
           }}
         >
           {t('复制所选兑换码到剪贴板')}
+        </Button>
+        <Button
+          type='warning'
+          style={{ marginRight: 8 }}
+          onClick={disableSelectedRedemptions}
+        >
+          {t('禁用所选兑换码')}
+        </Button>
+        <Button
+          type='danger'
+          style={{ marginRight: 8 }}
+          onClick={() => setShowBatchDeleteByName(true)}
+        >
+          {t('按名称批量删除兑换码')}
+        </Button>
+        <Button
+          type='danger'
+          onClick={deleteAllDisabledRedemptions}
+        >
+          {t('删除所有已禁用的兑换码')}
         </Button>
       </div>
 
