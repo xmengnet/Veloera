@@ -78,7 +78,7 @@ const PersonalSetting = () => {
   const [transferAmount, setTransferAmount] = useState(0);
   const [checkInEnabled, setCheckInEnabled] = useState(false);
   const [checkInLoading, setCheckInLoading] = useState(false);
-  const [canCheckIn, setCanCheckIn] = useState(false);
+  const [canCheckIn, setCanCheckIn] = useState(true);
   const [isModelsExpanded, setIsModelsExpanded] = useState(() => {
     // Initialize from localStorage if available
     const savedState = localStorage.getItem('modelsExpanded');
@@ -104,7 +104,7 @@ const PersonalSetting = () => {
         setTurnstileEnabled(true);
         setTurnstileSiteKey(status.turnstile_site_key);
       }
-      setCheckInEnabled(status.CheckInEnabled === 'true');
+      setCheckInEnabled(status.check_in_enabled === true);
     }
     getUserData().then((res) => {
       console.log(userState);
@@ -114,6 +114,13 @@ const PersonalSetting = () => {
     checkUserCanCheckIn().then();
     setTransferAmount(getQuotaPerUnit());
   }, []);
+  
+  // 监听checkInEnabled状态变化，确保状态同步
+  useEffect(() => {
+    if (checkInEnabled) {
+      checkUserCanCheckIn();
+    }
+  }, [checkInEnabled]);
 
   useEffect(() => {
     let countdownInterval = null;
@@ -234,7 +241,9 @@ const PersonalSetting = () => {
       const { success, message, data } = res.data;
       
       if (success) {
-        showSuccess(t('签到成功！获得 ') + data.quota + ' Token');
+        const quotaPerUnit = status.quota_per_unit || 500000;
+        const dollarAmount = (data.quota / quotaPerUnit).toFixed(2);
+        showSuccess(t('签到成功！获得 ') + `$${dollarAmount}`);
         setCanCheckIn(false);
         getUserData(); // Refresh user data to get updated quota
       } else {
@@ -489,34 +498,7 @@ const PersonalSetting = () => {
               }
               footer={
                 <>
-                  {checkInEnabled && (
-                    <>
-                      <div 
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: 8, 
-                          marginBottom: 15,
-                          borderBottom: '1px solid var(--semi-color-border)',
-                          paddingBottom: 15
-                        }}
-                      >
-                        <Typography.Title heading={6}>
-                          {t('每日签到')}
-                        </Typography.Title>
-                        <Button 
-                          type="primary" 
-                          theme="solid" 
-                          onClick={handleCheckIn} 
-                          loading={checkInLoading}
-                          disabled={!canCheckIn}
-                        >
-                          {canCheckIn ? t('立即签到') : t('今日已签到')}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                  <div
+                      <div
                     style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                   >
                     <Typography.Title heading={6}>
@@ -607,6 +589,32 @@ const PersonalSetting = () => {
                 </Descriptions.Item>
               </Descriptions>
             </Card>
+            {checkInEnabled && (
+              <Card style={{ marginTop: 10 }}>
+                <Typography.Title heading={6}>{t('每日签到')}</Typography.Title>
+                <div style={{ marginTop: 20 }}>
+                  <Typography.Text>{t('签到可获得额外的 Token 奖励。每天只能签到一次，请按时签到哦！')}</Typography.Text>
+                  <div style={{ marginTop: 15 }}>
+                    <Button 
+                      type="primary" 
+                      theme="solid" 
+                      size="large"
+                      onClick={handleCheckIn} 
+                      loading={checkInLoading}
+                      disabled={!canCheckIn}
+                    >
+                      {canCheckIn ? t('立即签到') : t('今日已签到')}
+                    </Button>
+                    {!canCheckIn && (
+                      <Typography.Text style={{ marginLeft: 15, color: 'var(--semi-color-success)' }}>
+                        {t('已完成今日签到，明天再来哦！')}
+                      </Typography.Text>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+            
             <Card
               style={{ marginTop: 10 }}
               footer={
