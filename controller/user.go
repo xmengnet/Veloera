@@ -2,6 +2,7 @@ package controller
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -1043,4 +1044,94 @@ func UpdateUserSetting(c *gin.Context) {
 		"success": true,
 		"message": "设置已更新",
 	})
+}
+
+// CheckInStatus returns whether a user can check in today
+func CheckInStatus(c *gin.Context) {
+	id := c.GetInt("id")
+	user, err := model.GetUserById(id, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"can_check_in": user.CanCheckInToday(),
+		},
+	})
+}
+
+// CheckIn performs a daily check-in for the user
+func CheckIn(c *gin.Context) {
+	// Get check-in settings and validate them
+	checkInQuota, checkInMaxQuota, err := getAndValidateCheckInSettings()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Get user and perform check-in
+	id := c.GetInt("id")
+	user, err := model.GetUserById(id, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	reward, err := user.CheckIn(checkInQuota, checkInMaxQuota)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "签到成功",
+		"data": gin.H{
+			"quota": reward,
+		},
+	})
+}
+
+// getAndValidateCheckInSettings retrieves and validates check-in settings
+func getAndValidateCheckInSettings() (checkInQuota, checkInMaxQuota int, err error) {
+	common.OptionMapRWMutex.RLock()
+	checkInEnabled := common.OptionMap["CheckInEnabled"] == "true"
+	checkInQuotaStr := common.OptionMap["CheckInQuota"]
+	checkInMaxQuotaStr := common.OptionMap["CheckInMaxQuota"]
+	common.OptionMapRWMutex.RUnlock()
+	
+	if !checkInEnabled {
+		return 0, 0, errors.New("签到功能未启用")
+	}
+
+	checkInQuota, err = strconv.Atoi(checkInQuotaStr)
+	if err != nil || checkInQuota <= 0 {
+		return 0, 0, errors.New("签到额度配置错误")
+	}
+
+	checkInMaxQuota = checkInQuota
+	if checkInMaxQuotaStr != "" {
+		maxQuota, err := strconv.Atoi(checkInMaxQuotaStr)
+		if err == nil && maxQuota > checkInQuota {
+			checkInMaxQuota = maxQuota
+		}
+	}
+	
+	return checkInQuota, checkInMaxQuota, nil
 }

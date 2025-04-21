@@ -76,6 +76,9 @@ const PersonalSetting = () => {
   const [models, setModels] = useState([]);
   const [openTransfer, setOpenTransfer] = useState(false);
   const [transferAmount, setTransferAmount] = useState(0);
+  const [checkInEnabled, setCheckInEnabled] = useState(false);
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  const [canCheckIn, setCanCheckIn] = useState(false);
   const [isModelsExpanded, setIsModelsExpanded] = useState(() => {
     // Initialize from localStorage if available
     const savedState = localStorage.getItem('modelsExpanded');
@@ -101,12 +104,14 @@ const PersonalSetting = () => {
         setTurnstileEnabled(true);
         setTurnstileSiteKey(status.turnstile_site_key);
       }
+      setCheckInEnabled(status.CheckInEnabled === 'true');
     }
     getUserData().then((res) => {
       console.log(userState);
     });
     loadModels().then();
     getAffLink().then();
+    checkUserCanCheckIn().then();
     setTransferAmount(getQuotaPerUnit());
   }, []);
 
@@ -202,6 +207,45 @@ const PersonalSetting = () => {
     e.target.select();
     await copy(e.target.value);
     showSuccess(t('系统令牌已复制到剪切板'));
+  };
+  
+  const checkUserCanCheckIn = async () => {
+    if (!checkInEnabled) return;
+    
+    try {
+      const res = await API.get('/api/user/check_in_status');
+      const { success, message, data } = res.data;
+      if (success) {
+        setCanCheckIn(data.can_check_in);
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      console.error('Failed to check user check-in status:', error);
+    }
+  };
+  
+  const handleCheckIn = async () => {
+    if (!checkInEnabled || !canCheckIn) return;
+    
+    try {
+      setCheckInLoading(true);
+      const res = await API.post('/api/user/check_in');
+      const { success, message, data } = res.data;
+      
+      if (success) {
+        showSuccess(t('签到成功！获得 ') + data.quota + ' Token');
+        setCanCheckIn(false);
+        getUserData(); // Refresh user data to get updated quota
+      } else {
+        showError(message);
+      }
+    } catch (error) {
+      showError(t('签到失败，请稍后再试'));
+      console.error('Check-in failed:', error);
+    } finally {
+      setCheckInLoading(false);
+    }
   };
 
   const deleteAccount = async () => {
@@ -445,6 +489,33 @@ const PersonalSetting = () => {
               }
               footer={
                 <>
+                  {checkInEnabled && (
+                    <>
+                      <div 
+                        style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 8, 
+                          marginBottom: 15,
+                          borderBottom: '1px solid var(--semi-color-border)',
+                          paddingBottom: 15
+                        }}
+                      >
+                        <Typography.Title heading={6}>
+                          {t('每日签到')}
+                        </Typography.Title>
+                        <Button 
+                          type="primary" 
+                          theme="solid" 
+                          onClick={handleCheckIn} 
+                          loading={checkInLoading}
+                          disabled={!canCheckIn}
+                        >
+                          {canCheckIn ? t('立即签到') : t('今日已签到')}
+                        </Button>
+                      </div>
+                    </>
+                  )}
                   <div
                     style={{ display: 'flex', alignItems: 'center', gap: 8 }}
                   >

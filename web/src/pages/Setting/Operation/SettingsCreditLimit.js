@@ -17,6 +17,9 @@ export default function SettingsCreditLimit(props) {
     PreConsumedQuota: '',
     QuotaForInviter: '',
     QuotaForInvitee: '',
+    CheckInEnabled: false,
+    CheckInQuota: '',
+    CheckInMaxQuota: '',
   });
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
@@ -75,6 +78,64 @@ export default function SettingsCreditLimit(props) {
           getFormApi={(formAPI) => (refForm.current = formAPI)}
           style={{ marginBottom: 15 }}
         >
+          <Form.Section text={t('签到设置')}>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Switch
+                  label={t('启用签到功能')}
+                  field={'CheckInEnabled'}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      CheckInEnabled: value,
+                    })
+                  }
+                />
+              </Col>
+            </Row>
+            <Row gutter={16}>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.InputNumber
+                  label={t('每日签到额度')}
+                  field={'CheckInQuota'}
+                  step={100}
+                  min={0}
+                  suffix={'Token'}
+                  extraText={t('每日签到可获得的固定额度，或随机额度的最小值')}
+                  placeholder={t('例如：1000')}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      CheckInQuota: String(value),
+                    })
+                  }
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.InputNumber
+                  label={t('每日签到最高额度')}
+                  field={'CheckInMaxQuota'}
+                  step={100}
+                  min={0}
+                  suffix={'Token'}
+                  extraText={t('可选。设置后，签到额度将在最小值和最高值之间随机')}
+                  placeholder={t('例如：2000')}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      CheckInMaxQuota: String(value),
+                    })
+                  }
+                />
+              </Col>
+            </Row>
+            <Row>
+              <Button size='default' onClick={onSubmit} style={{ marginBottom: 20 }}>
+                {t('保存签到设置')}
+              </Button>
+            </Row>
+          </Form.Section>
+          
           <Form.Section text={t('额度设置')}>
             <Row gutter={16}>
               <Col xs={24} sm={12} md={8} lg={8} xl={8}>

@@ -188,6 +188,11 @@ func GetRandomInt(max int) int {
 	return rand.Intn(max)
 }
 
+// RandomInt returns a random integer in the range [0, max)
+func RandomInt(max int) int {
+	return rand.Intn(max)
+}
+
 func GetTimestamp() int64 {
 	return time.Now().Unix()
 }

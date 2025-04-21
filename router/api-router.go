@@ -60,6 +60,8 @@ func SetApiRouter(router *gin.Engine) {
 				selfRoute.POST("/amount", controller.RequestAmount)
 				selfRoute.POST("/aff_transfer", controller.TransferAffQuota)
 				selfRoute.PUT("/setting", controller.UpdateUserSetting)
+				selfRoute.GET("/check_in_status", controller.CheckInStatus)
+				selfRoute.POST("/check_in", controller.CheckIn)
 			}
 
 			adminRoute := userRoute.Group("/")

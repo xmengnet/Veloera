@@ -43,6 +43,9 @@ func InitOptionMap() {
 	common.OptionMap["AutomaticDisableChannelEnabled"] = strconv.FormatBool(common.AutomaticDisableChannelEnabled)
 	common.OptionMap["AutomaticEnableChannelEnabled"] = strconv.FormatBool(common.AutomaticEnableChannelEnabled)
 	common.OptionMap["LogConsumeEnabled"] = strconv.FormatBool(common.LogConsumeEnabled)
+	common.OptionMap["CheckInEnabled"] = strconv.FormatBool(common.CheckInEnabled)
+	common.OptionMap["CheckInQuota"] = strconv.Itoa(common.CheckInQuota)
+	common.OptionMap["CheckInMaxQuota"] = strconv.Itoa(common.CheckInMaxQuota)
 	common.OptionMap["DisplayInCurrencyEnabled"] = strconv.FormatBool(common.DisplayInCurrencyEnabled)
 	common.OptionMap["DisplayTokenStatEnabled"] = strconv.FormatBool(common.DisplayTokenStatEnabled)
 	common.OptionMap["DrawingEnabled"] = strconv.FormatBool(common.DrawingEnabled)
@@ -220,6 +223,12 @@ func updateOptionMap(key string, value string) (err error) {
 			common.AutomaticEnableChannelEnabled = boolValue
 		case "LogConsumeEnabled":
 			common.LogConsumeEnabled = boolValue
+		case "CheckInEnabled":
+			common.CheckInEnabled = boolValue
+		case "CheckInQuota":
+			common.CheckInQuota, _ = strconv.Atoi(value)
+		case "CheckInMaxQuota":
+			common.CheckInMaxQuota, _ = strconv.Atoi(value)
 		case "DisplayInCurrencyEnabled":
 			common.DisplayInCurrencyEnabled = boolValue
 		case "DisplayTokenStatEnabled":
