@@ -1,16 +1,19 @@
 # Veloera
 
-优秀的AI API网关系统
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/717a063ac5b8435cb78c8c3e71e6c5f3)](https://app.codacy.com/gh/Veloera/Veloera/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)[![Go Report Card](https://goreportcard.com/badge/github.com/Veloera/Veloera)](https://goreportcard.com/report/github.com/Veloera/Veloera)
+[![License](https://img.shields.io/github/license/Veloera/Veloera)](https://github.com/Veloera/Veloera/blob/main/LICENSE)[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Veloera/Veloera)](https://github.com/Veloera/Veloera/releases)
+  
+[![GitHub stars](https://img.shields.io/github/stars/Veloera/Veloera?style=social)](https://github.com/Veloera/Veloera/stargazers)[![Build Status](https://github.com/Veloera/Veloera/actions/workflows/docker-image-amd64.yml/badge.svg)](https://github.com/Veloera/Veloera/actions/workflows/docker-image-amd64.yml)[![Build Status](https://github.com/Veloera/Veloera/actions/workflows/linux-release.yml/badge.svg)](https://github.com/Veloera/Veloera/actions/workflows/linux-release.yml)
 
-> [!IMPORTANT]  
-> - 本项目在活跃开发阶段, 可能出现 Bug, 不建议用于生产环境! 
+
+优秀的 AI API 网关系统
 
 此项目基于 New Api 二次开发, 并会根据我需要开发更多功能.  
 点个 Star 再走吧~
 
 ## 特性
 
-- 支持以 `,` 分割的单渠道多 Key, 随机选取. 
+- 支持以 `,` 分割的单渠道多 Key, 随机选取.
 - 支持礼品码, 全局每用户一次, 可控制总使用次数
 - 原生支持 /hf/v1 接口
 - 支持正则表达式屏蔽词
@@ -21,11 +24,12 @@
 - 当没有聊天链接可用时, 不显示聊天按钮
 - 空回复不计费
 - 在日志表增加总/输入/输出 Tokens
+- 还有更多...
 
 ## 部署
 
 > [!TIP]
-> 最新版Docker镜像：`ghcr.io/veloera/veloera:latest`  
+> 最新版 Docker 镜像：`ghcr.io/veloera/veloera:latest`
 
 ### docker-compose
 
@@ -51,17 +55,17 @@ docker-compose up -d
 ## 环境变量
 
 - `GENERATE_DEFAULT_TOKEN`：是否为新注册用户生成初始令牌，默认为 `false`
-- `STREAMING_TIMEOUT`：流式回复超时时间，默认60秒
-- `DIFY_DEBUG`：Dify渠道是否输出工作流和节点信息，默认 `true`
-- `FORCE_STREAM_OPTION`：是否覆盖客户端stream_options参数，默认 `true`
-- `GET_MEDIA_TOKEN`：是否统计图片token，默认 `true`
-- `GET_MEDIA_TOKEN_NOT_STREAM`：非流情况下是否统计图片token，默认 `true`
+- `STREAMING_TIMEOUT`：流式回复超时时间，默认 60 秒
+- `DIFY_DEBUG`：Dify 渠道是否输出工作流和节点信息，默认 `true`
+- `FORCE_STREAM_OPTION`：是否覆盖客户端 stream_options 参数，默认 `true`
+- `GET_MEDIA_TOKEN`：是否统计图片 token，默认 `true`
+- `GET_MEDIA_TOKEN_NOT_STREAM`：非流情况下是否统计图片 token，默认 `true`
 - `UPDATE_TASK`：是否更新异步任务（Midjourney、Suno），默认 `true`
-- `COHERE_SAFETY_SETTING`：Cohere模型安全设置，可选值为 `NONE`, `CONTEXTUAL`, `STRICT`，默认 `NONE`
-- `GEMINI_VISION_MAX_IMAGE_NUM`：Gemini模型最大图片数量，默认 `16`
-- `MAX_FILE_DOWNLOAD_MB`: 最大文件下载大小，单位MB，默认 `20`
+- `COHERE_SAFETY_SETTING`：Cohere 模型安全设置，可选值为 `NONE`, `CONTEXTUAL`, `STRICT`，默认 `NONE`
+- `GEMINI_VISION_MAX_IMAGE_NUM`：Gemini 模型最大图片数量，默认 `16`
+- `MAX_FILE_DOWNLOAD_MB`: 最大文件下载大小，单位 MB，默认 `20`
 - `CRYPTO_SECRET`：加密密钥，用于加密数据库内容
-- `AZURE_DEFAULT_API_VERSION`：Azure渠道默认API版本，默认 `2024-12-01-preview`
+- `AZURE_DEFAULT_API_VERSION`：Azure 渠道默认 API 版本，默认 `2024-12-01-preview`
 - `NOTIFICATION_LIMIT_DURATION_MINUTE`：通知限制持续时间，默认 `10`分钟
 - `NOTIFY_LIMIT_COUNT`：用户通知在指定持续时间内的最大数量，默认 `2`
 
@@ -105,10 +109,10 @@ docker-compose up -d
 
 ## 📝 项目说明
 
-> [!NOTE]  
+> [!NOTE]
 > 本项目为开源项目，在[One API](https://github.com/songquanpeng/one-api)的基础上进行二次开发
 
-> [!IMPORTANT]  
+> [!IMPORTANT]
 > - 本项目仅供个人学习使用，不保证稳定性，且不提供任何技术支持。
 > - 使用者必须在遵循 OpenAI 的[使用条款](https://openai.com/policies/terms-of-use)以及**法律法规**的情况下使用，不得用于非法用途。
 > - 根据[《生成式人工智能服务管理暂行办法》](http://www.cac.gov.cn/2023-07/13/c_1690898327029107.htm)的要求，请勿对中国地区公众提供一切未经备案的生成式人工智能服务。
@@ -189,7 +193,7 @@ New API提供了丰富的功能，详细特性请参考[特性说明](https://do
 详细部署指南请参考[安装指南-部署方式](https://docs.newapi.pro/installation)：
 
 > [!TIP]
-> 最新版Docker镜像：`calciumion/new-api:latest`  
+> 最新版Docker镜像：`calciumion/new-api:latest`
 
 ### 多机部署注意事项
 - 必须设置环境变量 `SESSION_SECRET`，否则会导致多机部署时登录状态不一致
