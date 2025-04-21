@@ -822,42 +822,85 @@ func RootUserExists() bool {
 
 // CheckIn performs a check-in for the user and rewards them with tokens
 func (user *User) CheckIn(minQuota int, maxQuota int) (rewarded int, err error) {
-	// Start transaction
-	tx := DB.Begin()
-	if tx.Error != nil {
-		return 0, tx.Error
-	}
-	defer tx.Rollback()
-
-	// Lock the user row for update
-	err = tx.Set("gorm:query_option", "FOR UPDATE").First(&user, user.Id).Error
+	// Get current transaction and perform initial checks
+	tx, err := beginCheckInTransaction(user.Id)
 	if err != nil {
 		return 0, err
 	}
+	defer tx.Rollback()
 
+	// Check eligibility and calculate reward
+	reward, canCheckIn, err := calculateCheckInReward(user, minQuota, maxQuota)
+	if err != nil {
+		return 0, err
+	}
+	
+	if !canCheckIn {
+		return 0, errors.New("你今天已经签到过了")
+	}
+
+	// Apply check-in reward and save to database
+	if err = applyAndSaveCheckIn(tx, user, reward); err != nil {
+		return 0, err
+	}
+
+	// Commit transaction and update cache
+	if err = finalizeCheckIn(tx, user.Id, user.Quota); err != nil {
+		return 0, err
+	}
+
+	return reward, nil
+}
+
+// beginCheckInTransaction starts a transaction and locks the user row
+func beginCheckInTransaction(userId int) (*gorm.DB, error) {
+	tx := DB.Begin()
+	if tx.Error != nil {
+		return nil, tx.Error
+	}
+	
+	// Lock the user row for update
+	var user User
+	if err := tx.Set("gorm:query_option", "FOR UPDATE").Where("id = ?", userId).First(&user).Error; err != nil {
+		return nil, err
+	}
+	
+	return tx, nil
+}
+
+// calculateCheckInReward checks if user can check in and calculates the reward
+func calculateCheckInReward(user *User, minQuota int, maxQuota int) (reward int, canCheckIn bool, err error) {
 	// Check if user can check in today
+	canCheckIn = true
 	now := time.Now()
 	if user.LastCheckInTime != nil {
 		lastCheckIn := *user.LastCheckInTime
 		if lastCheckIn.Year() == now.Year() && lastCheckIn.Month() == now.Month() && lastCheckIn.Day() == now.Day() {
-			return 0, errors.New("你今天已经签到过了")
+			canCheckIn = false
+			return 0, false, nil
 		}
 	}
 
 	// Calculate reward amount
-	reward := minQuota
+	reward = minQuota
 	if maxQuota > minQuota {
 		// Generate random reward between min and max
 		reward = minQuota + common.RandomInt(maxQuota-minQuota+1)
 	}
+	
+	return reward, true, nil
+}
 
+// applyAndSaveCheckIn applies the check-in reward to the user and saves changes
+func applyAndSaveCheckIn(tx *gorm.DB, user *User, reward int) error {
 	// Update user data
+	now := time.Now()
 	user.LastCheckInTime = &now
 	user.Quota += reward
 
 	// Save changes
-	if err = tx.Save(user).Error; err != nil {
-		return 0, err
+	if err := tx.Save(user).Error; err != nil {
+		return err
 	}
 
 	// Record this activity in log
@@ -871,18 +914,23 @@ func (user *User) CheckIn(minQuota int, maxQuota int) (rewarded int, err error) 
 	if logErr != nil {
 		common.SysError("failed to record check-in log: " + logErr.Error())
 	}
+	
+	return nil
+}
 
+// finalizeCheckIn commits the transaction and updates the user cache
+func finalizeCheckIn(tx *gorm.DB, userId int, quota int) error {
 	// Commit transaction
-	if err = tx.Commit().Error; err != nil {
-		return 0, err
+	if err := tx.Commit().Error; err != nil {
+		return err
 	}
 
 	// Update cache
-	if err = updateUserQuotaCache(user.Id, user.Quota); err != nil {
+	if err := updateUserQuotaCache(userId, quota); err != nil {
 		common.SysError("failed to update user quota cache after check-in: " + err.Error())
 	}
-
-	return reward, nil
+	
+	return nil
 }
 
 // CanCheckInToday checks if the user can check in today

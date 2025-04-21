@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Button, Col, Form, Row, Spin, Switch } from '@douyinfe/semi-ui';
+import { Button, Col, Form, Row, Spin } from '@douyinfe/semi-ui';
 import { useTranslation } from 'react-i18next';
 import {
   compareObjects,
