@@ -32,34 +32,34 @@ func isValidRegex(pattern string) bool {
 
 func SensitiveWordsToString() string {
 	var builder strings.Builder
-	
+
 	// Add normal words
 	for _, word := range SensitiveWords {
 		builder.WriteString(word)
 		builder.WriteString("\n")
 	}
-	
+
 	// Add regex patterns with "regex:" prefix
 	for _, pattern := range RegexSensitiveWords {
 		builder.WriteString("regex:")
 		builder.WriteString(pattern)
 		builder.WriteString("\n")
 	}
-	
+
 	return builder.String()
 }
 
 func SensitiveWordsFromString(s string) {
 	SensitiveWords = []string{}
 	RegexSensitiveWords = []string{}
-	
+
 	lines := strings.Split(s, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
-		
+
 		// Check if line starts with "regex:"
 		if strings.HasPrefix(line, "regex:") {
 			pattern := strings.TrimPrefix(line, "regex:")

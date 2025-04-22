@@ -30,13 +30,13 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	modelName := info.OriginModelName
 	modelNameForPrice := modelName
 	modelNameForRatio := modelName
-	
+
 	// Check if the model has a prefix by looking at the difference between OriginModelName and UpstreamModelName
 	if info.OriginModelName != info.UpstreamModelName {
 		modelNameForPrice = info.UpstreamModelName
 		modelNameForRatio = info.UpstreamModelName
 	}
-	
+
 	modelPrice, usePrice := operation_setting.GetModelPrice(modelNameForPrice, false)
 	groupRatio := setting.GetGroupRatio(info.Group)
 	var preConsumedQuota int

@@ -9,7 +9,7 @@ import (
 
 func GetGroups(c *gin.Context) {
 	groupNames := make([]string, 0)
-	for groupName, _ := range setting.GetGroupRatioCopy() {
+	for groupName := range setting.GetGroupRatioCopy() {
 		groupNames = append(groupNames, groupName)
 	}
 	c.JSON(http.StatusOK, gin.H{

@@ -34,7 +34,7 @@ func InitTokenEncoders() {
 	if err != nil {
 		common.FatalLog(fmt.Sprintf("failed to get gpt-4o token encoder: %s", err.Error()))
 	}
-	for model, _ := range operation_setting.GetDefaultModelRatioMap() {
+	for model := range operation_setting.GetDefaultModelRatioMap() {
 		if strings.HasPrefix(model, "gpt-3.5") {
 			tokenEncoderMap[model] = cl100TokenEncoder
 		} else if strings.HasPrefix(model, "gpt-4") {

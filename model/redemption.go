@@ -139,7 +139,7 @@ func Redeem(key string, userId int) (quota int, isGift bool, err error) {
 		if err != nil {
 			return errors.New("无效的兑换码")
 		}
-		
+
 		if !redemption.IsGift {
 			// 普通兑换码逻辑
 			if redemption.Status != common.RedemptionCodeStatusEnabled {
@@ -166,12 +166,12 @@ func Redeem(key string, userId int) (quota int, isGift bool, err error) {
 			if usageCount > 0 {
 				return errors.New("您已经使用过这个礼品码")
 			}
-			
+
 			err = tx.Model(&User{}).Where("id = ?", userId).Update("quota", gorm.Expr("quota + ?", redemption.Quota)).Error
 			if err != nil {
 				return err
 			}
-			
+
 			// 记录使用日志
 			log := RedemptionLog{
 				RedemptionId: redemption.Id,
@@ -181,22 +181,22 @@ func Redeem(key string, userId int) (quota int, isGift bool, err error) {
 			if err = tx.Create(&log).Error; err != nil {
 				return err
 			}
-			
+
 			redemption.UsedCount++
 			if redemption.MaxUses != -1 && redemption.UsedCount >= redemption.MaxUses {
 				redemption.Status = common.RedemptionCodeStatusUsed
 			}
 		}
-		
+
 		err = tx.Save(redemption).Error
 		return err
 	})
 	if err != nil {
 		return 0, false, errors.New("兑换失败，" + err.Error())
 	}
-	RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过%s充值 %s，兑换码ID %d", 
+	RecordLog(userId, LogTypeTopup, fmt.Sprintf("通过%s充值 %s，兑换码ID %d",
 		map[bool]string{true: "礼品码", false: "兑换码"}[redemption.IsGift],
-		common.LogQuota(redemption.Quota), 
+		common.LogQuota(redemption.Quota),
 		redemption.Id))
 	return redemption.Quota, redemption.IsGift, nil
 }
@@ -251,18 +251,18 @@ func DeleteRedemptionsByName(name string) (count int64, err error) {
 	if name == "" {
 		return 0, errors.New("名称不能为空")
 	}
-	
+
 	// 先计算数量
 	count, err = CountRedemptionsByName(name)
 	if err != nil {
 		return 0, err
 	}
-	
+
 	// 没有找到匹配的兑换码
 	if count == 0 {
 		return 0, nil
 	}
-	
+
 	// 执行删除
 	result := DB.Where("name = ?", name).Delete(&Redemption{})
 	return result.RowsAffected, result.Error
@@ -273,7 +273,7 @@ func BatchDisableRedemptions(ids []int) (count int64, err error) {
 	if len(ids) == 0 {
 		return 0, errors.New("ID列表不能为空")
 	}
-	
+
 	result := DB.Model(&Redemption{}).Where("id IN ?", ids).Update("status", common.RedemptionCodeStatusDisabled)
 	return result.RowsAffected, result.Error
 }

@@ -251,7 +251,7 @@ func AddChannel(c *gin.Context) {
 		return
 	}
 	channel.CreatedTime = common.GetTimestamp()
-	
+
 	// 特殊处理 VertexAi 类型的渠道
 	if channel.Type == common.ChannelTypeVertexAi {
 		if channel.Other == "" {
@@ -286,7 +286,7 @@ func AddChannel(c *gin.Context) {
 		}
 	}
 
-	err = channel.Insert()  // 使用 Insert 方法替代 InsertChannel
+	err = channel.Insert() // 使用 Insert 方法替代 InsertChannel
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -294,7 +294,7 @@ func AddChannel(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

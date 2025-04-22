@@ -26,7 +26,7 @@ func embeddingRequestOpenAI2Moka(request dto.GeneralOpenAIRequest) *dto.Embeddin
 	}
 	return &dto.EmbeddingRequest{
 		Input: input,
-		Model:  request.Model,
+		Model: request.Model,
 	}
 }
 
@@ -80,4 +80,3 @@ func mokaEmbeddingHandler(c *gin.Context, resp *http.Response) (*dto.OpenAIError
 	_, err = c.Writer.Write(jsonResponse)
 	return nil, &fullTextResponse.Usage
 }
-

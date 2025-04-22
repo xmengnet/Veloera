@@ -10,7 +10,7 @@ import (
 func SetRelayRouter(router *gin.Engine) {
 	router.Use(middleware.CORS())
 	router.Use(middleware.DecompressRequestMiddleware())
-	
+
 	// 提取通用的 models 路由设置函数
 	setupModelsRouter := func(group *gin.RouterGroup) {
 		group.GET("", controller.ListModels)

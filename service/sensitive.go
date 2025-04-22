@@ -63,14 +63,14 @@ func SensitiveWordContains(text string) (bool, []string) {
 		return false, nil
 	}
 	checkText := strings.ToLower(text)
-	
+
 	// First check regular expressions
 	for _, pattern := range setting.RegexSensitiveWords {
 		if matched, err := regexp.MatchString(pattern, checkText); err == nil && matched {
 			return true, []string{pattern}
 		}
 	}
-	
+
 	// Then check normal words using AC algorithm
 	return AcSearch(checkText, setting.SensitiveWords, true)
 }

@@ -25,9 +25,9 @@ type ModelRequest struct {
 
 // Cache for storing channels by prefix
 var (
-	prefixChannelsMutex sync.RWMutex
-	prefixChannelsCache = make(map[string]map[string][]*model.Channel) // group -> prefix -> channels
-	prefixChannelsCacheExpiry = make(map[string]int64)               // group -> expiry timestamp
+	prefixChannelsMutex       sync.RWMutex
+	prefixChannelsCache       = make(map[string]map[string][]*model.Channel) // group -> prefix -> channels
+	prefixChannelsCacheExpiry = make(map[string]int64)                       // group -> expiry timestamp
 )
 
 // getPrefixChannels returns a map of prefix -> channels for a given group
@@ -61,7 +61,7 @@ func GetPrefixChannels(group string) map[string][]*model.Channel {
 // refreshPrefixChannelsCache refreshes the prefix channels cache for a given group
 func refreshPrefixChannelsCache(group string) map[string][]*model.Channel {
 	var channels []*model.Channel
-	
+
 	// Get channels for this group from the database
 	db := model.DB.Model(&model.Channel{}).Where("status = ?", common.ChannelStatusEnabled)
 	if group != "" {
@@ -78,7 +78,7 @@ func refreshPrefixChannelsCache(group string) map[string][]*model.Channel {
 		}
 		db = db.Where(condition)
 	}
-	
+
 	db.Order("priority desc").Find(&channels)
 	prefixMap := make(map[string][]*model.Channel)
 
@@ -184,7 +184,7 @@ func Distribute() func(c *gin.Context) {
 			userGroup = tokenGroup
 		}
 		c.Set("group", userGroup)
-		
+
 		// Check if the model has a prefix, which is used for routing
 		originalModel := modelRequest.Model
 		prefixedModel, hasPrefixedModel := c.Get("prefixed_model")
@@ -193,7 +193,7 @@ func Distribute() func(c *gin.Context) {
 		if hasPrefixedModel {
 			prefixedModelStr = prefixedModel.(string)
 			// Extract prefix from the model name if it exists
-			for prefix, _ := range getPrefixChannels(userGroup) {
+			for prefix := range getPrefixChannels(userGroup) {
 				if prefix != "" && strings.HasPrefix(prefixedModelStr, prefix) {
 					modelPrefix = prefix
 					// Update the model name to strip the prefix for channel selection
@@ -202,7 +202,7 @@ func Distribute() func(c *gin.Context) {
 				}
 			}
 		}
-		
+
 		if ok {
 			id, err := strconv.Atoi(channelId.(string))
 			if err != nil {
@@ -250,7 +250,7 @@ func Distribute() func(c *gin.Context) {
 				} else {
 					channel, err = model.CacheGetRandomSatisfiedChannel(userGroup, modelRequest.Model, 0)
 				}
-				
+
 				if err != nil {
 					message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", userGroup, originalModel)
 					// 如果错误，但是渠道不为空，说明是数据库一致性问题
@@ -355,13 +355,13 @@ func getModelRequest(c *gin.Context) (*ModelRequest, bool, error) {
 		}
 		c.Set("relay_mode", relayMode)
 	}
-	
+
 	// Check if the model name has a prefix that needs to be used for routing
 	// We save both the original model name (with prefix) and the model name without prefix
 	if modelRequest.Model != "" {
 		c.Set("prefixed_model", modelRequest.Model) // Store the original model name for later reference
 	}
-	
+
 	return &modelRequest, shouldSelectChannel, nil
 }
 
@@ -375,19 +375,19 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set("channel_type", channel.Type)
 	c.Set("channel_setting", channel.GetSetting())
 	c.Set("param_override", channel.GetParamOverride())
-	
+
 	// Set model prefix if available
 	if channel.ModelPrefix != nil && *channel.ModelPrefix != "" {
 		c.Set("model_prefix", *channel.ModelPrefix)
 	}
-	
+
 	if nil != channel.OpenAIOrganization && "" != *channel.OpenAIOrganization {
 		c.Set("channel_organization", *channel.OpenAIOrganization)
 	}
 	c.Set("auto_ban", channel.GetAutoBan())
 	c.Set("model_mapping", channel.GetModelMapping())
 	c.Set("status_code_mapping", channel.GetStatusCodeMapping())
-	
+
 	// 如果key包含逗号，随机选择一个key
 	if strings.Contains(channel.Key, ",") {
 		keys := strings.Split(channel.Key, ",")
@@ -396,7 +396,7 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	} else {
 		c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
 	}
-	
+
 	c.Set("base_url", channel.GetBaseURL())
 	// TODO: api_version统一
 	switch channel.Type {

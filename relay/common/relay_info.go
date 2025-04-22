@@ -87,7 +87,7 @@ type RelayInfo struct {
 	UserQuota            int
 	RelayFormat          string
 	SendResponseCount    int
-	PromptMessages       interface{} // 保存请求的消息内容
+	PromptMessages       interface{}            // 保存请求的消息内容
 	Other                map[string]interface{} // 用于存储额外信息，如输入输出内容
 	ThinkingContentInfo
 	*ClaudeConvertInfo
@@ -151,11 +151,11 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 	// firstResponseTime = time.Now() - 1 second
 
 	apiType, _ := relayconstant.ChannelType2APIType(channelType)
-	
+
 	// Get the original model name (with prefix if any)
 	prefixedModel := c.GetString("prefixed_model")
 	originalModel := c.GetString("original_model")
-	
+
 	// If we have a prefixed model, use it as the origin model name for display
 	// but use the unprefixed model name for the upstream
 	if prefixedModel != "" {
@@ -179,7 +179,7 @@ func GenRelayInfo(c *gin.Context) *RelayInfo {
 		TokenUnlimited:    tokenUnlimited,
 		StartTime:         startTime,
 		FirstResponseTime: startTime.Add(-time.Second),
-		OriginModelName:   originalModel, // Use the prefixed model name for display
+		OriginModelName:   originalModel,                 // Use the prefixed model name for display
 		UpstreamModelName: c.GetString("original_model"), // Use the unprefixed model name for upstream
 		//RecodeModelName:   c.GetString("original_model"),
 		IsModelMapped:  false,

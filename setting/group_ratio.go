@@ -17,7 +17,7 @@ var groupRatioMutex sync.RWMutex
 func GetGroupRatioCopy() map[string]float64 {
 	groupRatioMutex.RLock()
 	defer groupRatioMutex.RUnlock()
-	
+
 	groupRatioCopy := make(map[string]float64)
 	for k, v := range groupRatio {
 		groupRatioCopy[k] = v
@@ -28,7 +28,7 @@ func GetGroupRatioCopy() map[string]float64 {
 func ContainsGroupRatio(name string) bool {
 	groupRatioMutex.RLock()
 	defer groupRatioMutex.RUnlock()
-	
+
 	_, ok := groupRatio[name]
 	return ok
 }
@@ -36,7 +36,7 @@ func ContainsGroupRatio(name string) bool {
 func GroupRatio2JSONString() string {
 	groupRatioMutex.RLock()
 	defer groupRatioMutex.RUnlock()
-	
+
 	jsonBytes, err := json.Marshal(groupRatio)
 	if err != nil {
 		common.SysError("error marshalling model ratio: " + err.Error())
@@ -47,7 +47,7 @@ func GroupRatio2JSONString() string {
 func UpdateGroupRatioByJSONString(jsonStr string) error {
 	groupRatioMutex.Lock()
 	defer groupRatioMutex.Unlock()
-	
+
 	groupRatio = make(map[string]float64)
 	return json.Unmarshal([]byte(jsonStr), &groupRatio)
 }
@@ -55,7 +55,7 @@ func UpdateGroupRatioByJSONString(jsonStr string) error {
 func GetGroupRatio(name string) float64 {
 	groupRatioMutex.RLock()
 	defer groupRatioMutex.RUnlock()
-	
+
 	ratio, ok := groupRatio[name]
 	if !ok {
 		common.SysError("group ratio not found: " + name)

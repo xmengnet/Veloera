@@ -126,7 +126,7 @@ func AddRedemption(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	var keys []string
 	for i := 0; i < redemption.Count; i++ {
 		key := common.GetUUID()
@@ -227,7 +227,7 @@ func CountRedemptionsByName(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	count, err := model.CountRedemptionsByName(name)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -236,7 +236,7 @@ func CountRedemptionsByName(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -254,7 +254,7 @@ func DeleteRedemptionsByName(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	count, err := model.DeleteRedemptionsByName(name)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -263,7 +263,7 @@ func DeleteRedemptionsByName(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -276,7 +276,7 @@ func BatchDisableRedemptions(c *gin.Context) {
 	var requestData struct {
 		Ids []int `json:"ids"`
 	}
-	
+
 	err := c.ShouldBindJSON(&requestData)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -285,7 +285,7 @@ func BatchDisableRedemptions(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	if len(requestData.Ids) == 0 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -293,7 +293,7 @@ func BatchDisableRedemptions(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	count, err := model.BatchDisableRedemptions(requestData.Ids)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -302,7 +302,7 @@ func BatchDisableRedemptions(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -320,7 +320,7 @@ func DeleteDisabledRedemptions(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

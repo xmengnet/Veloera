@@ -68,7 +68,7 @@ func Login(c *gin.Context) {
 // setup session & cookies and then return user info
 func setupLogin(user *model.User, c *gin.Context) {
 	session := sessions.Default(c)
-	
+
 	// Clear any existing session data first
 	session.Clear()
 	err := session.Save()
@@ -79,14 +79,14 @@ func setupLogin(user *model.User, c *gin.Context) {
 		})
 		return
 	}
-	
+
 	// Set new session data
 	session.Set("id", user.Id)
 	session.Set("username", user.Username)
 	session.Set("role", user.Role)
 	session.Set("status", user.Status)
 	session.Set("group", user.Group)
-	
+
 	err = session.Save()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -95,7 +95,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 		})
 		return
 	}
-	
+
 	cleanUser := model.User{
 		Id:          user.Id,
 		Username:    user.Username,
@@ -104,7 +104,7 @@ func setupLogin(user *model.User, c *gin.Context) {
 		Status:      user.Status,
 		Group:       user.Group,
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "",
 		"success": true,
@@ -913,7 +913,7 @@ func TopUp(c *gin.Context) {
 		return
 	}
 	id := c.GetInt("id")
-	quota, isGift, err := model.Redeem(req.Key, id)  // 修改这里，接收所有三个返回值
+	quota, isGift, err := model.Redeem(req.Key, id) // 修改这里，接收所有三个返回值
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -926,7 +926,7 @@ func TopUp(c *gin.Context) {
 		"message": "",
 		"data": gin.H{
 			"quota":   quota,
-			"is_gift": isGift,  // 可以选择返回给前端，用于显示不同的提示信息
+			"is_gift": isGift, // 可以选择返回给前端，用于显示不同的提示信息
 		},
 	})
 	return
@@ -1115,7 +1115,7 @@ func getAndValidateCheckInSettings() (checkInQuota, checkInMaxQuota int, err err
 	checkInQuotaStr := common.OptionMap["CheckInQuota"]
 	checkInMaxQuotaStr := common.OptionMap["CheckInMaxQuota"]
 	common.OptionMapRWMutex.RUnlock()
-	
+
 	if !checkInEnabled {
 		return 0, 0, errors.New("签到功能未启用")
 	}
@@ -1132,6 +1132,6 @@ func getAndValidateCheckInSettings() (checkInQuota, checkInMaxQuota int, err err
 			checkInMaxQuota = maxQuota
 		}
 	}
-	
+
 	return checkInQuota, checkInMaxQuota, nil
 }

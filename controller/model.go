@@ -110,7 +110,7 @@ func init() {
 			Parent:     nil,
 		})
 	}
-	for modelName, _ := range constant.MidjourneyModel2Action {
+	for modelName := range constant.MidjourneyModel2Action {
 		openAIModels = append(openAIModels, dto.OpenAIModels{
 			Id:         modelName,
 			Object:     "model",
@@ -165,7 +165,7 @@ func ListModels(c *gin.Context) {
 		if prefix == "" {
 			continue // Skip channels without prefixes
 		}
-		
+
 		// For each channel with a prefix, add its models to the prefix map
 		for _, channel := range channels {
 			for _, modelName := range channel.GetModels() {
@@ -183,8 +183,8 @@ func ListModels(c *gin.Context) {
 		} else {
 			tokenModelLimit = map[string]bool{}
 		}
-		
-		for allowModel, _ := range tokenModelLimit {
+
+		for allowModel := range tokenModelLimit {
 			// Check if this model has a prefix mapping
 			prefixedModel := allowModel
 			for baseModel, prefixedName := range modelPrefixMap {
@@ -193,7 +193,7 @@ func ListModels(c *gin.Context) {
 					break
 				}
 			}
-			
+
 			if _, ok := openAIModelsMap[allowModel]; ok {
 				modelInfo := openAIModelsMap[allowModel]
 				// Replace ID with prefixed model if available
@@ -214,7 +214,7 @@ func ListModels(c *gin.Context) {
 	} else {
 		models := model.GetGroupModels(group)
 		addedModels := make(map[string]bool)
-		
+
 		// First add all models with prefixes
 		for baseModel, prefixedModel := range modelPrefixMap {
 			// Check if the base model is in the allowed models for this group
@@ -225,7 +225,7 @@ func ListModels(c *gin.Context) {
 					break
 				}
 			}
-			
+
 			if isAllowed {
 				if _, ok := openAIModelsMap[baseModel]; ok {
 					modelInfo := openAIModelsMap[baseModel]
@@ -245,14 +245,14 @@ func ListModels(c *gin.Context) {
 				addedModels[baseModel] = true
 			}
 		}
-		
+
 		// Then add remaining models without prefixes
 		for _, s := range models {
 			// Skip if already added with a prefix
 			if addedModels[s] {
 				continue
 			}
-			
+
 			if _, ok := openAIModelsMap[s]; ok {
 				userOpenAiModels = append(userOpenAiModels, openAIModelsMap[s])
 			} else {
@@ -268,7 +268,7 @@ func ListModels(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	c.JSON(200, gin.H{
 		"success": true,
 		"data":    userOpenAiModels,
@@ -298,7 +298,7 @@ func EnabledListModels(c *gin.Context) {
 
 func RetrieveModel(c *gin.Context) {
 	modelId := c.Param("model")
-	
+
 	// Check if the model ID has a prefix
 	userId := c.GetInt("id")
 	userGroup, err := model.GetUserGroup(userId, true)
@@ -308,9 +308,9 @@ func RetrieveModel(c *gin.Context) {
 		if tokenGroup != "" {
 			group = tokenGroup
 		}
-		
+
 		prefixChannels := middleware.GetPrefixChannels(group)
-		for prefix, _ := range prefixChannels {
+		for prefix := range prefixChannels {
 			if prefix != "" && strings.HasPrefix(modelId, prefix) {
 				// We found a model with a prefix, try to retrieve the base model
 				baseModelId := strings.TrimPrefix(modelId, prefix)
@@ -323,7 +323,7 @@ func RetrieveModel(c *gin.Context) {
 			}
 		}
 	}
-	
+
 	// No prefix found or base model doesn't exist, try the original model ID
 	if aiModel, ok := openAIModelsMap[modelId]; ok {
 		c.JSON(200, aiModel)

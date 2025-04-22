@@ -31,7 +31,7 @@ func GetPricing(c *gin.Context) {
 			delete(groupRatio, group)
 		}
 	}
-	
+
 	// Now add models with prefixes to the pricing data
 	pricingWithPrefixes := enhancePricingWithPrefixes(pricing, group)
 
@@ -48,18 +48,18 @@ func GetPricing(c *gin.Context) {
 func enhancePricingWithPrefixes(pricing []model.Pricing, group string) []model.Pricing {
 	// Get all channels with prefixes for this group
 	prefixChannels := middleware.GetPrefixChannels(group)
-	
+
 	// Track which models have prefixed versions
 	modelsWithPrefix := make(map[string]bool)
-	
+
 	// First, create a list of prefixed models
 	var prefixedPricingModels []model.Pricing
-	
+
 	for prefix, channels := range prefixChannels {
 		if prefix == "" {
 			continue // Skip channels without prefixes
 		}
-		
+
 		// For each channel with a prefix, add models with that prefix
 		for _, channel := range channels {
 			for _, channelModel := range channel.GetModels() {
@@ -69,10 +69,10 @@ func enhancePricingWithPrefixes(pricing []model.Pricing, group string) []model.P
 						// Create a new pricing entry for the prefixed model
 						prefixedPricing := baseModelPricing
 						prefixedPricing.ModelName = prefix + channelModel
-						
+
 						// Add the new prefixed model to the result
 						prefixedPricingModels = append(prefixedPricingModels, prefixedPricing)
-						
+
 						// Mark this model as having a prefixed version
 						modelsWithPrefix[channelModel] = true
 						break
@@ -81,38 +81,38 @@ func enhancePricingWithPrefixes(pricing []model.Pricing, group string) []model.P
 			}
 		}
 	}
-	
+
 	// Now create the result with:
 	// 1. All prefixed models
 	// 2. Only those non-prefixed models that aren't also available with prefixes
 	// 3. Or are available both with and without prefixes
 	var result []model.Pricing
-	
+
 	// First add all prefixed models
 	result = append(result, prefixedPricingModels...)
-	
+
 	// Check if non-prefixed models are available from non-prefixed channels
 	nonPrefixedChannels := prefixChannels[""]
 	modelsFromNonPrefixedChannels := make(map[string]bool)
-	
+
 	for _, channel := range nonPrefixedChannels {
 		for _, model := range channel.GetModels() {
 			modelsFromNonPrefixedChannels[model] = true
 		}
 	}
-	
+
 	// Now add original models that either:
 	// - Don't have a prefixed version
 	// - OR are also available directly (without prefix)
 	for _, modelPricing := range pricing {
 		modelName := modelPricing.ModelName
-		
+
 		// If this model doesn't have a prefixed version, or is available from non-prefixed channels
 		if !modelsWithPrefix[modelName] || modelsFromNonPrefixedChannels[modelName] {
 			result = append(result, modelPricing)
 		}
 	}
-	
+
 	return result
 }
 

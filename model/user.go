@@ -834,7 +834,7 @@ func (user *User) CheckIn(minQuota int, maxQuota int) (rewarded int, err error) 
 	if err != nil {
 		return 0, err
 	}
-	
+
 	if !canCheckIn {
 		return 0, errors.New("你今天已经签到过了")
 	}
@@ -858,13 +858,13 @@ func beginCheckInTransaction(userId int) (*gorm.DB, error) {
 	if tx.Error != nil {
 		return nil, tx.Error
 	}
-	
+
 	// Lock the user row for update
 	var user User
 	if err := tx.Set("gorm:query_option", "FOR UPDATE").Where("id = ?", userId).First(&user).Error; err != nil {
 		return nil, err
 	}
-	
+
 	return tx, nil
 }
 
@@ -887,7 +887,7 @@ func calculateCheckInReward(user *User, minQuota int, maxQuota int) (reward int,
 		// Generate random reward between min and max
 		reward = minQuota + common.RandomInt(maxQuota-minQuota+1)
 	}
-	
+
 	return reward, true, nil
 }
 
@@ -914,7 +914,7 @@ func applyAndSaveCheckIn(tx *gorm.DB, user *User, reward int) error {
 	if logErr != nil {
 		common.SysError("failed to record check-in log: " + logErr.Error())
 	}
-	
+
 	return nil
 }
 
@@ -929,7 +929,7 @@ func finalizeCheckIn(tx *gorm.DB, userId int, quota int) error {
 	if err := updateUserQuotaCache(userId, quota); err != nil {
 		common.SysError("failed to update user quota cache after check-in: " + err.Error())
 	}
-	
+
 	return nil
 }
 
@@ -938,11 +938,11 @@ func (user *User) CanCheckInToday() bool {
 	if user.LastCheckInTime == nil {
 		return true
 	}
-	
+
 	now := time.Now()
 	lastCheckIn := *user.LastCheckInTime
-	
-	return !(lastCheckIn.Year() == now.Year() && 
-	         lastCheckIn.Month() == now.Month() && 
-	         lastCheckIn.Day() == now.Day())
+
+	return !(lastCheckIn.Year() == now.Year() &&
+		lastCheckIn.Month() == now.Month() &&
+		lastCheckIn.Day() == now.Day())
 }

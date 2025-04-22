@@ -74,7 +74,7 @@ func IsEmptyOrWhitespace(s string) bool {
 	if s == "" {
 		return true
 	}
-	
+
 	for _, char := range s {
 		if char != ' ' && char != '\t' && char != '\n' && char != '\r' {
 			return false
