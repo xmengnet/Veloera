@@ -263,7 +263,7 @@ const ModelPricing = () => {
           let price = parseFloat(text) * groupRatio[selectedGroup];
           content = (
             <>
-              ${t('模型价格')}：${price}
+              {t('模型价格')}：${price}
             </>
           );
         }

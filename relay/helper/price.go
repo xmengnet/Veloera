@@ -26,7 +26,18 @@ func (p PriceData) ToSetting() string {
 }
 
 func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens int, maxTokens int) (PriceData, error) {
-	modelPrice, usePrice := operation_setting.GetModelPrice(info.OriginModelName, false)
+	// Extract the base model name if it has a prefix
+	modelName := info.OriginModelName
+	modelNameForPrice := modelName
+	modelNameForRatio := modelName
+	
+	// Check if the model has a prefix by looking at the difference between OriginModelName and UpstreamModelName
+	if info.OriginModelName != info.UpstreamModelName {
+		modelNameForPrice = info.UpstreamModelName
+		modelNameForRatio = info.UpstreamModelName
+	}
+	
+	modelPrice, usePrice := operation_setting.GetModelPrice(modelNameForPrice, false)
 	groupRatio := setting.GetGroupRatio(info.Group)
 	var preConsumedQuota int
 	var modelRatio float64
@@ -39,7 +50,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 			preConsumedTokens = promptTokens + maxTokens
 		}
 		var success bool
-		modelRatio, success = operation_setting.GetModelRatio(info.OriginModelName)
+		modelRatio, success = operation_setting.GetModelRatio(modelNameForRatio)
 		if !success {
 			acceptUnsetRatio := false
 			if accept, ok := info.UserSetting[constant2.UserAcceptUnsetRatioModel]; ok {
@@ -50,15 +61,15 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 			}
 			if !acceptUnsetRatio {
 				if info.UserId == 1 {
-					return PriceData{}, fmt.Errorf("模型 %s 倍率或价格未配置，请设置或开始自用模式；Model %s ratio or price not set, please set or start self-use mode", info.OriginModelName, info.OriginModelName)
+					return PriceData{}, fmt.Errorf("模型 %s 倍率或价格未配置，请设置或开始自用模式；Model %s ratio or price not set, please set or start self-use mode", modelName, modelName)
 				} else {
-					return PriceData{}, fmt.Errorf("模型 %s 倍率或价格未配置, 请联系管理员设置；Model %s ratio or price not set, please contact administrator to set", info.OriginModelName, info.OriginModelName)
+					return PriceData{}, fmt.Errorf("模型 %s 倍率或价格未配置, 请联系管理员设置；Model %s ratio or price not set, please contact administrator to set", modelName, modelName)
 				}
 			}
 		}
-		completionRatio = operation_setting.GetCompletionRatio(info.OriginModelName)
-		cacheRatio, _ = operation_setting.GetCacheRatio(info.OriginModelName)
-		cacheCreationRatio, _ = operation_setting.GetCreateCacheRatio(info.OriginModelName)
+		completionRatio = operation_setting.GetCompletionRatio(modelNameForRatio)
+		cacheRatio, _ = operation_setting.GetCacheRatio(modelNameForRatio)
+		cacheCreationRatio, _ = operation_setting.GetCreateCacheRatio(modelNameForRatio)
 		ratio := modelRatio * groupRatio
 		preConsumedQuota = int(float64(preConsumedTokens) * ratio)
 	} else {

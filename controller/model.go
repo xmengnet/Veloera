@@ -7,6 +7,7 @@ import (
 	"one-api/common"
 	"one-api/constant"
 	"one-api/dto"
+	"one-api/middleware"
 	"one-api/model"
 	"one-api/relay"
 	"one-api/relay/channel/ai360"
@@ -15,6 +16,7 @@ import (
 	"one-api/relay/channel/moonshot"
 	relaycommon "one-api/relay/common"
 	relayconstant "one-api/relay/constant"
+	"strings"
 )
 
 // https://platform.openai.com/docs/api-reference/models/list
@@ -139,6 +141,38 @@ func init() {
 func ListModels(c *gin.Context) {
 	userOpenAiModels := make([]dto.OpenAIModels, 0)
 	permission := getPermission()
+	modelPrefixMap := make(map[string]string) // Map to store prefix for each model
+
+	// Get the user group to look up available channels
+	userId := c.GetInt("id")
+	userGroup, err := model.GetUserGroup(userId, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "get user group failed",
+		})
+		return
+	}
+	group := userGroup
+	tokenGroup := c.GetString("token_group")
+	if tokenGroup != "" {
+		group = tokenGroup
+	}
+
+	// Get channels with prefixes
+	prefixChannels := middleware.GetPrefixChannels(group)
+	for prefix, channels := range prefixChannels {
+		if prefix == "" {
+			continue // Skip channels without prefixes
+		}
+		
+		// For each channel with a prefix, add its models to the prefix map
+		for _, channel := range channels {
+			for _, modelName := range channel.GetModels() {
+				modelPrefixMap[modelName] = prefix + modelName
+			}
+		}
+	}
 
 	modelLimitEnable := c.GetBool("token_model_limit_enabled")
 	if modelLimitEnable {
@@ -149,38 +183,76 @@ func ListModels(c *gin.Context) {
 		} else {
 			tokenModelLimit = map[string]bool{}
 		}
+		
 		for allowModel, _ := range tokenModelLimit {
+			// Check if this model has a prefix mapping
+			prefixedModel := allowModel
+			for baseModel, prefixedName := range modelPrefixMap {
+				if baseModel == allowModel {
+					prefixedModel = prefixedName
+					break
+				}
+			}
+			
 			if _, ok := openAIModelsMap[allowModel]; ok {
-				userOpenAiModels = append(userOpenAiModels, openAIModelsMap[allowModel])
+				modelInfo := openAIModelsMap[allowModel]
+				// Replace ID with prefixed model if available
+				modelInfo.Id = prefixedModel
+				userOpenAiModels = append(userOpenAiModels, modelInfo)
 			} else {
 				userOpenAiModels = append(userOpenAiModels, dto.OpenAIModels{
-					Id:         allowModel,
+					Id:         prefixedModel, // Use the prefixed model ID
 					Object:     "model",
 					Created:    1626777600,
 					OwnedBy:    "custom",
 					Permission: permission,
-					Root:       allowModel,
+					Root:       allowModel, // Keep the original model name as root
 					Parent:     nil,
 				})
 			}
 		}
 	} else {
-		userId := c.GetInt("id")
-		userGroup, err := model.GetUserGroup(userId, true)
-		if err != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "get user group failed",
-			})
-			return
-		}
-		group := userGroup
-		tokenGroup := c.GetString("token_group")
-		if tokenGroup != "" {
-			group = tokenGroup
-		}
 		models := model.GetGroupModels(group)
+		addedModels := make(map[string]bool)
+		
+		// First add all models with prefixes
+		for baseModel, prefixedModel := range modelPrefixMap {
+			// Check if the base model is in the allowed models for this group
+			isAllowed := false
+			for _, groupModel := range models {
+				if groupModel == baseModel {
+					isAllowed = true
+					break
+				}
+			}
+			
+			if isAllowed {
+				if _, ok := openAIModelsMap[baseModel]; ok {
+					modelInfo := openAIModelsMap[baseModel]
+					modelInfo.Id = prefixedModel
+					userOpenAiModels = append(userOpenAiModels, modelInfo)
+				} else {
+					userOpenAiModels = append(userOpenAiModels, dto.OpenAIModels{
+						Id:         prefixedModel,
+						Object:     "model",
+						Created:    1626777600,
+						OwnedBy:    "custom",
+						Permission: permission,
+						Root:       baseModel,
+						Parent:     nil,
+					})
+				}
+				addedModels[baseModel] = true
+			}
+		}
+		
+		// Then add remaining models without prefixes
 		for _, s := range models {
+			// Skip if already added with a prefix
+			if addedModels[s] {
+				continue
+			}
+			
 			if _, ok := openAIModelsMap[s]; ok {
 				userOpenAiModels = append(userOpenAiModels, openAIModelsMap[s])
 			} else {
@@ -196,6 +268,7 @@ func ListModels(c *gin.Context) {
 			}
 		}
 	}
+	
 	c.JSON(200, gin.H{
 		"success": true,
 		"data":    userOpenAiModels,
@@ -225,6 +298,33 @@ func EnabledListModels(c *gin.Context) {
 
 func RetrieveModel(c *gin.Context) {
 	modelId := c.Param("model")
+	
+	// Check if the model ID has a prefix
+	userId := c.GetInt("id")
+	userGroup, err := model.GetUserGroup(userId, true)
+	if err == nil {
+		group := userGroup
+		tokenGroup := c.GetString("token_group")
+		if tokenGroup != "" {
+			group = tokenGroup
+		}
+		
+		prefixChannels := middleware.GetPrefixChannels(group)
+		for prefix, _ := range prefixChannels {
+			if prefix != "" && strings.HasPrefix(modelId, prefix) {
+				// We found a model with a prefix, try to retrieve the base model
+				baseModelId := strings.TrimPrefix(modelId, prefix)
+				if aiModel, ok := openAIModelsMap[baseModelId]; ok {
+					modelCopy := aiModel
+					modelCopy.Id = modelId // Use the prefixed model ID
+					c.JSON(200, modelCopy)
+					return
+				}
+			}
+		}
+	}
+	
+	// No prefix found or base model doesn't exist, try the original model ID
 	if aiModel, ok := openAIModelsMap[modelId]; ok {
 		c.JSON(200, aiModel)
 	} else {

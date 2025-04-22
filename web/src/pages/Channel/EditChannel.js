@@ -906,6 +906,21 @@ const EditChannel = (props) => {
             value={inputs.weight}
             autoComplete='new-password'
           />
+          <div style={{ marginTop: 10 }}>
+            <Typography.Text strong>{t('渠道前缀')}</Typography.Text>
+          </div>
+          <Tooltip content={t('可选项，设置后此渠道的所有模型向客户显示时都会自动添加此前缀，同时可以根据前缀将请求路由到该渠道')}>
+            <Input
+              label={t('渠道前缀')}
+              name='model_prefix'
+              placeholder={t('例如: cursor-')}
+              onChange={(value) => {
+                handleInputChange('model_prefix', value);
+              }}
+              value={inputs.model_prefix}
+              autoComplete='new-password'
+            />
+          </Tooltip>
           <>
             <div style={{ marginTop: 10 }}>
               <Typography.Text strong>{t('渠道额外设置')}：</Typography.Text>
