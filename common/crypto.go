@@ -2,6 +2,7 @@ package common
 
 import (
 	"crypto/hmac"
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/hex"
 	"golang.org/x/crypto/bcrypt"
@@ -28,4 +29,10 @@ func Password2Hash(password string) (string, error) {
 func ValidatePasswordAndHash(password string, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
+}
+
+// GetMD5Hash generates an MD5 hash for the given string
+func GetMD5Hash(text string) string {
+	hash := md5.Sum([]byte(text))
+	return hex.EncodeToString(hash[:])
 }

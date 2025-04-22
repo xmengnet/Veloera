@@ -28,6 +28,11 @@ var (
 	prefixChannelsMutex       sync.RWMutex
 	prefixChannelsCache       = make(map[string]map[string][]*model.Channel) // group -> prefix -> channels
 	prefixChannelsCacheExpiry = make(map[string]int64)                       // group -> expiry timestamp
+
+	// Round-robin key selection state
+	channelKeysMutex sync.Mutex
+	channelKeysIndex = make(map[int]int)    // channel_id -> current key index
+	channelKeysHash  = make(map[int]string) // channel_id -> hash of keys
 )
 
 // getPrefixChannels returns a map of prefix -> channels for a given group
@@ -56,6 +61,17 @@ func getPrefixChannels(group string) map[string][]*model.Channel {
 // GetPrefixChannels is the exported version of getPrefixChannels for use by other packages
 func GetPrefixChannels(group string) map[string][]*model.Channel {
 	return getPrefixChannels(group)
+}
+
+// ResetChannelKeyIndex resets the round-robin key index for a specific channel
+// This can be called when a channel's keys are updated
+func ResetChannelKeyIndex(channelId int) {
+	channelKeysMutex.Lock()
+	defer channelKeysMutex.Unlock()
+
+	// Reset the key index and hash to force recalculation next time
+	delete(channelKeysIndex, channelId)
+	delete(channelKeysHash, channelId)
 }
 
 // refreshPrefixChannelsCache refreshes the prefix channels cache for a given group
@@ -388,10 +404,37 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set("model_mapping", channel.GetModelMapping())
 	c.Set("status_code_mapping", channel.GetStatusCodeMapping())
 
-	// 如果key包含逗号，随机选择一个key
+	// 如果key包含逗号，使用轮询方式选择一个key
 	if strings.Contains(channel.Key, ",") {
 		keys := strings.Split(channel.Key, ",")
-		selectedKey := keys[common.GetRandomInt(len(keys))]
+
+		// Get current index for this channel using round-robin
+		channelKeysMutex.Lock()
+
+		// Check if keys have changed by comparing with stored hash
+		currentHash := common.GetMD5Hash(channel.Key)
+		storedHash, hashExists := channelKeysHash[channel.Id]
+
+		// Reset index if keys have changed or index doesn't exist
+		index := 0
+		if hashExists && storedHash == currentHash {
+			// Keys haven't changed, use stored index
+			storedIndex, exists := channelKeysIndex[channel.Id]
+			if exists && storedIndex < len(keys) {
+				index = storedIndex
+			}
+		} else {
+			// Keys have changed or this is first use, update hash and reset index
+			channelKeysHash[channel.Id] = currentHash
+		}
+
+		// Select key at current index
+		selectedKey := keys[index]
+
+		// Update index for next use
+		channelKeysIndex[channel.Id] = (index + 1) % len(keys)
+		channelKeysMutex.Unlock()
+
 		c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", strings.TrimSpace(selectedKey)))
 	} else {
 		c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
