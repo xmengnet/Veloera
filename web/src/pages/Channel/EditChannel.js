@@ -584,26 +584,41 @@ const EditChannel = (props) => {
           <div style={{ marginTop: 10 }}>
             <Typography.Text strong>{t('密钥')}：</Typography.Text>
           </div>
-          <Input
-            label={t('密钥')}
-            name='key'
-            required
-            type={showKey ? 'text' : 'password'}
-            placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
-            onChange={(value) => {
-              handleInputChange('key', value);
-            }}
-            value={inputs.key || (isEdit ? initialKey : '')}
-            autoComplete='new-password'
-            addonAfter={
-              <Button
-                theme="borderless"
-                icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
-                onClick={() => setShowKey(!showKey)}
-                style={{ padding: '0 4px' }}
-              />
-            }
-          />
+          {inputs.type === 41 ? (
+            <TextArea
+              label={t('密钥')}
+              name='key'
+              required
+              placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
+              onChange={(value) => {
+                handleInputChange('key', value);
+              }}
+              value={inputs.key || (isEdit ? initialKey : '')}
+              autoComplete='new-password'
+              autosize={{ minRows: 2 }}
+            />
+          ) : (
+            <Input
+              label={t('密钥')}
+              name='key'
+              required
+              type={showKey ? 'text' : 'password'}
+              placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
+              onChange={(value) => {
+                handleInputChange('key', value);
+              }}
+              value={inputs.key || (isEdit ? initialKey : '')}
+              autoComplete='new-password'
+              addonAfter={
+                <Button
+                  theme="borderless"
+                  icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
+                  onClick={() => setShowKey(!showKey)}
+                  style={{ padding: '0 4px' }}
+                />
+              }
+            />
+          )}
           {inputs.type === 22 && (
             <>
               <div style={{ marginTop: 10 }}>

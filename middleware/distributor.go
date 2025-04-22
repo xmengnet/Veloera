@@ -405,7 +405,10 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set("status_code_mapping", channel.GetStatusCodeMapping())
 
 	// 如果key包含逗号，使用轮询方式选择一个key
-	if strings.Contains(channel.Key, ",") {
+	// 对于渠道类型41，不处理逗号分隔的多key机制
+	if channel.Type == 41 {
+		c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
+	} else if strings.Contains(channel.Key, ",") {
 		keys := strings.Split(channel.Key, ",")
 
 		// Get current index for this channel using round-robin
