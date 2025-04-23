@@ -147,17 +147,43 @@ func OidcAuth(c *gin.Context) {
 	} else {
 		if common.RegisterEnabled {
 			user.Email = oidcUser.Email
+			// Initialize username
 			if oidcUser.PreferredUsername != "" {
 				user.Username = oidcUser.PreferredUsername
 			} else {
 				user.Username = "oidc_" + strconv.Itoa(model.GetMaxUserId()+1)
 			}
+
 			if oidcUser.Name != "" {
 				user.DisplayName = oidcUser.Name
 			} else {
 				user.DisplayName = "OIDC User"
 			}
-			err := user.Insert(0)
+
+			// Try to insert user, handle username uniqueness constraint
+			var err error
+			// If custom username provided, try it first, then fallback to incremental ids
+			isCustomUsername := oidcUser.PreferredUsername != ""
+			baseUserId := model.GetMaxUserId() + 1
+			
+			for i := 0; i < 5; i++ {
+				if i > 0 || !isCustomUsername {
+					// If custom username failed on first attempt or if using generated username
+					user.Username = "oidc_" + strconv.Itoa(baseUserId + i - 1)
+				}
+				
+				err = user.Insert(0)
+				if err == nil {
+					break
+				}
+				// Check if error is about username uniqueness
+				if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
+					continue
+				}
+				// If it's another error, break the loop
+				break
+			}
+			
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,

@@ -232,7 +232,6 @@ func LinuxdoOAuth(c *gin.Context) {
 		}
 	} else {
 		if common.RegisterEnabled {
-			user.Username = "linuxdo_" + strconv.Itoa(model.GetMaxUserId()+1)
 			user.DisplayName = linuxdoUser.Name
 			user.Role = common.RoleCommonUser
 			user.Status = common.UserStatusEnabled
@@ -243,7 +242,24 @@ func LinuxdoOAuth(c *gin.Context) {
 				inviterId, _ = model.GetUserIdByAffCode(affCode.(string))
 			}
 
-			if err := user.Insert(inviterId); err != nil {
+			// Try to insert user, handle username uniqueness constraint
+			var err error
+			baseUserId := model.GetMaxUserId() + 1
+			for i := 0; i < 5; i++ {
+				user.Username = "linuxdo_" + strconv.Itoa(baseUserId + i)
+				err = user.Insert(inviterId)
+				if err == nil {
+					break
+				}
+				// Check if error is about username uniqueness
+				if strings.Contains(err.Error(), "UNIQUE constraint failed: users.username") {
+					continue
+				}
+				// If it's another error, break the loop
+				break
+			}
+
+			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
 					"message": err.Error(),
