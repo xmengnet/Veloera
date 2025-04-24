@@ -25,9 +25,184 @@ import {
   Checkbox,
   Banner,
   Modal,
+  Checkbox as SemiCheckbox,
+  Row,
+  Col,
 } from '@douyinfe/semi-ui';
 import { getChannelModels, loadChannelModels } from '../../components/utils.js';
-import { IconEyeOpened, IconEyeClosedSolid } from '@douyinfe/semi-icons';
+import { IconEyeOpened, IconEyeClosedSolid, IconRefresh } from '@douyinfe/semi-icons';
+
+// ModelSelector component for advanced model selection
+const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModels, onSelect }) => {
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
+  const [localSelectedModels, setLocalSelectedModels] = useState([...selectedModels]);
+  const [search, setSearch] = useState('');
+  const [availableModels, setAvailableModels] = useState([]);
+  
+  // Create options from available models
+  const allOptions = availableModels.map(model => ({
+    label: model,
+    value: model
+  }));
+  
+  // Filter models based on search input
+  const filteredOptions = allOptions.filter(option => 
+    option.label.toLowerCase().includes(search.toLowerCase())
+  );
+  
+  // Handle check/uncheck of individual model
+  const handleCheckboxChange = (value) => {
+    if (localSelectedModels.includes(value)) {
+      setLocalSelectedModels(localSelectedModels.filter(model => model !== value));
+    } else {
+      setLocalSelectedModels([...localSelectedModels, value]);
+    }
+  };
+  
+  // Select all visible models
+  const handleSelectAll = () => {
+    const allValues = filteredOptions.map(option => option.value);
+    // Merge with existing selection
+    const newSelection = [...new Set([...localSelectedModels, ...allValues])];
+    setLocalSelectedModels(newSelection);
+  };
+  
+  // Invert selection for all visible models
+  const handleDeselectAll = () => {
+    const visibleValues = new Set(filteredOptions.map(option => option.value));
+    const newSelection = [...localSelectedModels];
+    
+    // For each visible option, toggle its selection state
+    filteredOptions.forEach(option => {
+      const value = option.value;
+      const index = newSelection.indexOf(value);
+      if (index === -1) {
+        // If not selected, add it
+        newSelection.push(value);
+      } else {
+        // If selected, remove it
+        newSelection.splice(index, 1);
+      }
+    });
+    
+    setLocalSelectedModels(newSelection);
+  };
+  
+  // Fetch models from API - using the same logic as fetchUpstreamModelList
+  const fetchModels = async () => {
+    try {
+      setLoading(true);
+      const models = [...localSelectedModels]; // Keep existing selections
+      let res;
+      
+      if (isEdit && channelId) {
+        // If in edit mode, get models from the existing channel
+        res = await API.get('/api/channel/fetch_models/' + channelId);
+      } else {
+        // If in create mode, get models using the provided credentials
+        if (!apiKey) {
+          showError(t('请填写密钥'));
+          setLoading(false);
+          return;
+        }
+        
+        res = await API.post('/api/channel/fetch_models', {
+          base_url: baseUrl,
+          type: type,
+          key: apiKey,
+        });
+      }
+      
+      if (res.data && res.data.success) {
+        // Get models from the response
+        let fetchedModels = [];
+        
+        if (Array.isArray(res.data.data)) {
+          fetchedModels = res.data.data;
+        } else if (res.data.data && Array.isArray(res.data.data.data)) {
+          fetchedModels = res.data.data.data;
+        }
+        
+        // Update available models
+        setAvailableModels(fetchedModels);
+        
+        // Show success message
+        showSuccess(t('获取模型列表成功'));
+      } else {
+        showError(t('获取模型列表失败'));
+      }
+    } catch (error) {
+      showError(error.message || t('获取模型列表失败'));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Apply selection and close modal
+  const applySelection = () => {
+    onSelect(localSelectedModels);
+    Modal.destroyAll();
+  };
+  
+  // Load models when component mounts
+  useEffect(() => {
+    fetchModels();
+  }, []);
+  
+  return (
+    <div>
+      <div style={{ display: 'flex', marginBottom: 16, alignItems: 'center' }}>
+        <Input 
+          placeholder={t('搜索模型')}
+          value={search}
+          onChange={setSearch}
+          style={{ flex: 1 }}
+          showClear
+        />
+        <Button 
+          icon={<IconRefresh />} 
+          onClick={fetchModels} 
+          loading={loading}
+          style={{ marginLeft: 8 }}
+        />
+        <Button onClick={handleSelectAll} style={{ marginLeft: 8 }}>{t('全选')}</Button>
+        <Button onClick={handleDeselectAll} style={{ marginLeft: 8 }}>{t('反选')}</Button>
+      </div>
+      
+      <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid var(--semi-color-border)', padding: 8 }}>
+        <Row>
+          {filteredOptions.map((option) => (
+            <Col span={6} key={option.value} style={{ marginBottom: 8 }}>
+              <SemiCheckbox
+                checked={localSelectedModels.includes(option.value)}
+                onChange={() => handleCheckboxChange(option.value)}
+                style={{ width: '100%' }}
+              >
+                <Typography.Text 
+                  ellipsis={{ showTooltip: true }} 
+                  style={{ 
+                    maxWidth: '100%', 
+                    wordBreak: 'break-word', 
+                    whiteSpace: 'normal', 
+                    lineHeight: '1.2'
+                  }}
+                >
+                  {option.label}
+                </Typography.Text>
+              </SemiCheckbox>
+            </Col>
+          ))}
+        </Row>
+      </div>
+      
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 8 }}>
+        <Button type='primary' onClick={applySelection}>{t('确定')}</Button>
+        <Button style={{ marginLeft: 8 }} onClick={() => Modal.destroyAll()}>{t('取消')}</Button>
+      </div>
+    </div>
+  );
+};
 
 const MODEL_MAPPING_EXAMPLE = {
   'gpt-3.5-turbo': 'gpt-3.5-turbo-0125',
@@ -818,6 +993,38 @@ const EditChannel = (props) => {
                   {t('获取模型列表')}
                 </Button>
               </Tooltip>
+              <Button 
+                style={{ marginLeft: 8 }} 
+                type='tertiary'
+                onClick={() => {
+                  // Using Modal.info for better customization
+                  Modal.info({
+                    title: t('高级模型选择'),
+                    content: (
+                      <div>
+                        <ModelSelector
+                          channelId={channelId}
+                          type={inputs.type}
+                          apiKey={inputs.key}
+                          baseUrl={inputs.base_url}
+                          isEdit={isEdit}
+                          selectedModels={inputs.models}
+                          onSelect={(selectedModels) => {
+                            handleInputChange('models', selectedModels);
+                          }}
+                        />
+                      </div>
+                    ),
+                    footer: null,
+                    width: 800,
+                    mask: true,
+                    maskClosable: false,
+                    closable: true,
+                  });
+                }}
+              >
+                {t('高级')}
+              </Button>
               <Button
                 type='warning'
                 onClick={() => {
