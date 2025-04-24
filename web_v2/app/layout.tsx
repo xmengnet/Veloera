@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
-import { StatusProvider } from "./contexts/status";
+
+// Providers
+import { I18nProvider } from "@/i18n";
+import { Providers } from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Veloera",
-  description: "现代的 AI API 网关",
+  description: "Veloera Platform",
 };
 
 export default function RootLayout({
@@ -27,17 +29,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={cn(
-          "min-h-screen bg-background font-sans antialiased",
-          geistSans.variable,
-          geistMono.variable
-        )}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <StatusProvider>
-          <div className="relative flex min-h-screen flex-col">
-            {children}
-          </div>
-        </StatusProvider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
