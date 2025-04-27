@@ -104,7 +104,7 @@ func chooseDB(envName string) (*gorm.DB, error) {
 			// Check and migrate from one-api.db to veloera.db
 			oldPaths := []string{"./one-api.db", "./data/one-api.db"}
 			newPaths := []string{"./veloera.db", "./data/veloera.db"}
-			
+
 			for i, oldPath := range oldPaths {
 				if _, err := os.Stat(oldPath); err == nil {
 					// Old database exists, copy it to new location if new db doesn't exist
@@ -119,7 +119,7 @@ func chooseDB(envName string) (*gorm.DB, error) {
 					}
 				}
 			}
-			
+
 			common.SysLog("SQL_DSN not set, using SQLite as database")
 			common.UsingSQLite = true
 			return gorm.Open(sqlite.Open(common.SQLitePath), &gorm.Config{
@@ -144,11 +144,11 @@ func chooseDB(envName string) (*gorm.DB, error) {
 	// Use SQLite
 	common.SysLog("SQL_DSN not set, using SQLite as database")
 	common.UsingSQLite = true
-	
+
 	// Check and migrate from one-api.db to veloera.db
 	oldPaths := []string{"./one-api.db", "./data/one-api.db"}
 	newPaths := []string{"./veloera.db", "./data/veloera.db"}
-	
+
 	for i, oldPath := range oldPaths {
 		if _, err := os.Stat(oldPath); err == nil {
 			// Old database exists, copy it to new location if new db doesn't exist
@@ -163,7 +163,7 @@ func chooseDB(envName string) (*gorm.DB, error) {
 			}
 		}
 	}
-	
+
 	return gorm.Open(sqlite.Open(common.SQLitePath), &gorm.Config{
 		PrepareStmt: true, // precompile SQL
 	})

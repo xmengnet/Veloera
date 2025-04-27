@@ -152,7 +152,7 @@ func GitHubOAuth(c *gin.Context) {
 			var err error
 			baseUserId := model.GetMaxUserId() + 1
 			for i := 0; i < 5; i++ {
-				user.Username = "github_" + strconv.Itoa(baseUserId + i)
+				user.Username = "github_" + strconv.Itoa(baseUserId+i)
 				err = user.Insert(inviterId)
 				if err == nil {
 					break

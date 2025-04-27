@@ -165,13 +165,13 @@ func OidcAuth(c *gin.Context) {
 			// If custom username provided, try it first, then fallback to incremental ids
 			isCustomUsername := oidcUser.PreferredUsername != ""
 			baseUserId := model.GetMaxUserId() + 1
-			
+
 			for i := 0; i < 5; i++ {
 				if i > 0 || !isCustomUsername {
 					// If custom username failed on first attempt or if using generated username
-					user.Username = "oidc_" + strconv.Itoa(baseUserId + i - 1)
+					user.Username = "oidc_" + strconv.Itoa(baseUserId+i-1)
 				}
-				
+
 				err = user.Insert(0)
 				if err == nil {
 					break
@@ -183,7 +183,7 @@ func OidcAuth(c *gin.Context) {
 				// If it's another error, break the loop
 				break
 			}
-			
+
 			if err != nil {
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
