@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"one-api/constant"
+	"one-api/middleware"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -499,13 +500,55 @@ func GetUserModels(c *gin.Context) {
 	}
 	groups := setting.GetUserUsableGroups(user.Group)
 	var models []string
-	for group := range groups {
-		for _, g := range model.GetGroupModels(group) {
-			if !common.StringsContains(models, g) {
-				models = append(models, g)
+	addedModels := make(map[string]bool) // Track added models to avoid duplicates
+
+	// Get prefix channels for the user's group
+	prefixChannels := middleware.GetPrefixChannels(user.Group)
+	modelPrefixMap := make(map[string]string) // Map base model to prefixed model
+
+	for prefix, channels := range prefixChannels {
+		if prefix == "" {
+			continue // Skip channels without prefixes
+		}
+		for _, channel := range channels {
+			for _, modelName := range channel.GetModels() {
+				modelPrefixMap[modelName] = prefix + modelName
 			}
 		}
 	}
+
+	// First add all models with prefixes that are allowed for the user's group
+	for group := range groups {
+		groupModels := model.GetGroupModels(group)
+		for _, baseModel := range groupModels {
+			if prefixedModel, ok := modelPrefixMap[baseModel]; ok {
+				if !addedModels[prefixedModel] {
+					models = append(models, prefixedModel)
+					addedModels[prefixedModel] = true
+				}
+			}
+		}
+	}
+
+	// Then add remaining models without prefixes that are allowed for the user's group
+	for group := range groups {
+		groupModels := model.GetGroupModels(group)
+		for _, baseModel := range groupModels {
+			// Check if this base model was already added with a prefix
+			isPrefixed := false
+			for _, prefixedName := range modelPrefixMap {
+				if prefixedName == baseModel {
+					isPrefixed = true
+					break
+				}
+			}
+			if !isPrefixed && !addedModels[baseModel] {
+				models = append(models, baseModel)
+				addedModels[baseModel] = true
+			}
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -988,7 +1031,7 @@ func UpdateUserSetting(c *gin.Context) {
 		}
 	}
 
-	// 如果是邮件类型，验证邮箱地址
+	// 如果提供了通知邮箱，添加到设置中
 	if req.QuotaWarningType == constant.NotifyTypeEmail && req.NotificationEmail != "" {
 		// 验证邮箱格式
 		if !strings.Contains(req.NotificationEmail, "@") {
