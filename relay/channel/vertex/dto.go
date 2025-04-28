@@ -1,7 +1,7 @@
 package vertex
 
 import (
-	"one-api/dto"
+	"veloera/dto"
 )
 
 type VertexAIClaudeRequest struct {

@@ -6,16 +6,16 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"one-api/common"
-	"one-api/model"
-	"one-api/service"
+	"veloera/common"
+	"veloera/model"
+	"veloera/service"
 	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
-// https://github.com/songquanpeng/one-api/issues/79
+// https://github.com/songquanpeng/veloera/issues/79
 
 type OpenAISubscriptionResponse struct {
 	Object             string  `json:"object"`

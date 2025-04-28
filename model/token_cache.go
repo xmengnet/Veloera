@@ -2,8 +2,8 @@ package model
 
 import (
 	"fmt"
-	"one-api/common"
-	"one-api/constant"
+	"veloera/common"
+	"veloera/constant"
 	"time"
 )
 

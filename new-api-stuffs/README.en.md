@@ -30,7 +30,7 @@
 ## 📝 Project Description
 
 > [!NOTE]  
-> This is an open-source project developed based on [One API](https://github.com/songquanpeng/one-api)
+> This is an open-source project developed based on [One API](https://github.com/songquanpeng/veloera)
 
 > [!IMPORTANT]  
 > - Users must comply with OpenAI's [Terms of Use](https://openai.com/policies/terms-of-use) and relevant laws and regulations. Not to be used for illegal purposes.
@@ -46,7 +46,7 @@
 5. 🔍 Query usage quota by key:
     - Works with [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool)
 6. 📑 Configurable items per page in pagination
-7. 🔄 Compatible with original One API database (one-api.db)
+7. 🔄 Compatible with original One API database (veloera.db)
 8. 💵 Support per-request model pricing, configurable in System Settings - Operation Settings
 9. ⚖️ Support channel **weighted random** selection
 10. 📈 Data dashboard (console)
@@ -193,7 +193,7 @@ In `Channel->Edit`, set `Status Code Override` to:
 - [Suno Integration](Suno.md)
 
 ## Related Projects
-- [One API](https://github.com/songquanpeng/one-api): Original project
+- [One API](https://github.com/songquanpeng/veloera): Original project
 - [Midjourney-Proxy](https://github.com/novicezk/midjourney-proxy): Midjourney interface support
 - [chatnio](https://github.com/Deeptrain-Community/chatnio): Next-gen AI B/C solution
 - [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool): Query usage quota by key

@@ -2,9 +2,9 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"one-api/common"
-	"one-api/dto"
-	"one-api/model"
+	"veloera/common"
+	"veloera/dto"
+	"veloera/model"
 )
 
 func GetSubscription(c *gin.Context) {

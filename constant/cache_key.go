@@ -1,6 +1,6 @@
 package constant
 
-import "one-api/common"
+import "veloera/common"
 
 var (
 	TokenCacheSeconds         = common.SyncFrequency

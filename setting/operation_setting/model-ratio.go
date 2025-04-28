@@ -2,12 +2,12 @@ package operation_setting
 
 import (
 	"encoding/json"
-	"one-api/common"
+	"veloera/common"
 	"strings"
 	"sync"
 )
 
-// from songquanpeng/one-api
+// from songquanpeng/veloera
 const (
 	USD2RMB = 7.3 // 暂定 1 USD = 7.3 RMB
 	USD     = 500 // $0.002 = 1 -> $1 = 500

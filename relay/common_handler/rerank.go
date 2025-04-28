@@ -4,11 +4,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/common"
-	"one-api/dto"
-	"one-api/relay/channel/xinference"
-	relaycommon "one-api/relay/common"
-	"one-api/service"
+	"veloera/common"
+	"veloera/dto"
+	"veloera/relay/channel/xinference"
+	relaycommon "veloera/relay/common"
+	"veloera/service"
 )
 
 func RerankHandler(c *gin.Context, info *relaycommon.RelayInfo, resp *http.Response) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {

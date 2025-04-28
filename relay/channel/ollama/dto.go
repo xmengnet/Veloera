@@ -1,6 +1,6 @@
 package ollama
 
-import "one-api/dto"
+import "veloera/dto"
 
 type OllamaRequest struct {
 	Model            string                `json:"model,omitempty"`

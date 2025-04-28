@@ -1,6 +1,6 @@
 package system_setting
 
-import "one-api/setting/config"
+import "veloera/setting/config"
 
 type OIDCSettings struct {
 	Enabled               bool   `json:"enabled"`

@@ -7,7 +7,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"one-api/common"
+	"veloera/common"
 	"time"
 )
 

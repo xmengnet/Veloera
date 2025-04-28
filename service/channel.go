@@ -3,10 +3,10 @@ package service
 import (
 	"fmt"
 	"net/http"
-	"one-api/common"
-	"one-api/dto"
-	"one-api/model"
-	"one-api/setting/operation_setting"
+	"veloera/common"
+	"veloera/dto"
+	"veloera/model"
+	"veloera/setting/operation_setting"
 	"strings"
 )
 

@@ -3,11 +3,11 @@ package helper
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"one-api/common"
-	constant2 "one-api/constant"
-	relaycommon "one-api/relay/common"
-	"one-api/setting"
-	"one-api/setting/operation_setting"
+	"veloera/common"
+	constant2 "veloera/constant"
+	relaycommon "veloera/relay/common"
+	"veloera/setting"
+	"veloera/setting/operation_setting"
 )
 
 type PriceData struct {

@@ -1,7 +1,7 @@
 package constant
 
 import (
-	"one-api/common"
+	"veloera/common"
 )
 
 var StreamingTimeout int

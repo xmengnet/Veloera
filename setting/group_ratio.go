@@ -3,7 +3,7 @@ package setting
 import (
 	"encoding/json"
 	"errors"
-	"one-api/common"
+	"veloera/common"
 	"sync"
 )
 

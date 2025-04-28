@@ -3,7 +3,7 @@ package middleware
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"one-api/common"
+	"veloera/common"
 )
 
 func abortWithOpenAiMessage(c *gin.Context, statusCode int, message string) {

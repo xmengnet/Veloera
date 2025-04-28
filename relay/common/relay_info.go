@@ -1,10 +1,10 @@
 package common
 
 import (
-	"one-api/common"
-	"one-api/constant"
-	"one-api/dto"
-	relayconstant "one-api/relay/constant"
+	"veloera/common"
+	"veloera/constant"
+	"veloera/dto"
+	relayconstant "veloera/relay/constant"
 	"strings"
 	"time"
 

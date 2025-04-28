@@ -8,6 +8,7 @@ build
 logs
 web/dist
 .env
+veloera
 one-api
 .DS_Store
 tiktoken_cache

@@ -8,12 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/common"
-	"one-api/dto"
-	relaycommon "one-api/relay/common"
-	"one-api/relay/helper"
-	"one-api/service"
-	"one-api/setting/model_setting"
+	"veloera/common"
+	"veloera/dto"
+	relaycommon "veloera/relay/common"
+	"veloera/relay/helper"
+	"veloera/service"
+	"veloera/setting/model_setting"
 	"strings"
 )
 

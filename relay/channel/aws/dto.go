@@ -1,7 +1,7 @@
 package aws
 
 import (
-	"one-api/dto"
+	"veloera/dto"
 )
 
 type AwsClaudeRequest struct {

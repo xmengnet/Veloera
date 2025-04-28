@@ -1,8 +1,8 @@
 package router
 
 import (
-	"one-api/controller"
-	"one-api/middleware"
+	"veloera/controller"
+	"veloera/middleware"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"

@@ -1,7 +1,7 @@
 package service
 
 import (
-	"one-api/dto"
+	"veloera/dto"
 )
 
 //func GetPromptTokens(textRequest dto.GeneralOpenAIRequest, relayMode int) (int, error) {

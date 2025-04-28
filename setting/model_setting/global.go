@@ -1,7 +1,7 @@
 package model_setting
 
 import (
-	"one-api/setting/config"
+	"veloera/setting/config"
 )
 
 type GlobalSettings struct {

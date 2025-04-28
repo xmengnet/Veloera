@@ -3,9 +3,9 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"one-api/common"
-	"one-api/dto"
-	relaycommon "one-api/relay/common"
+	"veloera/common"
+	"veloera/dto"
+	relaycommon "veloera/relay/common"
 	"strings"
 )
 

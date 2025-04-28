@@ -3,8 +3,8 @@ package router
 import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
-	"one-api/controller"
-	"one-api/middleware"
+	"veloera/controller"
+	"veloera/middleware"
 )
 
 func SetDashboardRouter(router *gin.Engine) {

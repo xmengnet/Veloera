@@ -3,8 +3,8 @@ package service
 import (
 	"errors"
 	"fmt"
-	"one-api/dto"
-	"one-api/setting"
+	"veloera/dto"
+	"veloera/setting"
 	"regexp"
 	"strings"
 )

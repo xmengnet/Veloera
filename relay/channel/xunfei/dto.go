@@ -1,6 +1,6 @@
 package xunfei
 
-import "one-api/dto"
+import "veloera/dto"
 
 type XunfeiMessage struct {
 	Role    string `json:"role"`

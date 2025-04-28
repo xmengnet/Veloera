@@ -4,7 +4,7 @@ import (
 	"errors"
 	"github.com/bytedance/gopkg/util/gopool"
 	"gorm.io/gorm"
-	"one-api/common"
+	"veloera/common"
 	"sync"
 	"time"
 )

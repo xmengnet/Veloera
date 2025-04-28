@@ -1,7 +1,7 @@
 package mistral
 
 import (
-	"one-api/dto"
+	"veloera/dto"
 )
 
 func requestOpenAI2Mistral(request *dto.GeneralOpenAIRequest) *dto.GeneralOpenAIRequest {

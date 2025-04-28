@@ -2,10 +2,10 @@ package service
 
 import (
 	"fmt"
-	"one-api/common"
-	"one-api/constant"
-	"one-api/dto"
-	"one-api/model"
+	"veloera/common"
+	"veloera/constant"
+	"veloera/dto"
+	"veloera/model"
 	"strings"
 )
 

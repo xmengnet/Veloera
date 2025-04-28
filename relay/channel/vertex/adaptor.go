@@ -7,12 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/dto"
-	"one-api/relay/channel"
-	"one-api/relay/channel/claude"
-	"one-api/relay/channel/gemini"
-	"one-api/relay/channel/openai"
-	relaycommon "one-api/relay/common"
+	"veloera/dto"
+	"veloera/relay/channel"
+	"veloera/relay/channel/claude"
+	"veloera/relay/channel/gemini"
+	"veloera/relay/channel/openai"
+	relaycommon "veloera/relay/common"
 	"strings"
 )
 

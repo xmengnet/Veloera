@@ -2,7 +2,7 @@ package setting
 
 import (
 	"encoding/json"
-	"one-api/common"
+	"veloera/common"
 )
 
 var Chats = []map[string]string{

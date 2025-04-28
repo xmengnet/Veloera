@@ -5,8 +5,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/dto"
-	"one-api/service"
+	"veloera/dto"
+	"veloera/service"
 )
 
 func siliconflowRerankHandler(c *gin.Context, resp *http.Response) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {

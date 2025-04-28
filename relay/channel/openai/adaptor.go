@@ -8,20 +8,20 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
-	"one-api/common"
-	constant2 "one-api/constant"
-	"one-api/dto"
-	"one-api/relay/channel"
-	"one-api/relay/channel/ai360"
-	"one-api/relay/channel/lingyiwanwu"
-	"one-api/relay/channel/minimax"
-	"one-api/relay/channel/moonshot"
-	"one-api/relay/channel/openrouter"
-	"one-api/relay/channel/xinference"
-	relaycommon "one-api/relay/common"
-	"one-api/relay/common_handler"
-	"one-api/relay/constant"
-	"one-api/service"
+	"veloera/common"
+	constant2 "veloera/constant"
+	"veloera/dto"
+	"veloera/relay/channel"
+	"veloera/relay/channel/ai360"
+	"veloera/relay/channel/lingyiwanwu"
+	"veloera/relay/channel/minimax"
+	"veloera/relay/channel/moonshot"
+	"veloera/relay/channel/openrouter"
+	"veloera/relay/channel/xinference"
+	relaycommon "veloera/relay/common"
+	"veloera/relay/common_handler"
+	"veloera/relay/constant"
+	"veloera/service"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -88,7 +88,7 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		task := strings.TrimPrefix(requestURL, "/v1/")
 		model_ := info.UpstreamModelName
 		model_ = strings.Replace(model_, ".", "", -1)
-		// https://github.com/songquanpeng/one-api/issues/67
+		// https://github.com/songquanpeng/veloera/issues/67
 		requestURL = fmt.Sprintf("/openai/deployments/%s/%s", model_, task)
 		if info.RelayMode == constant.RelayModeRealtime {
 			requestURL = fmt.Sprintf("/openai/realtime?deployment=%s&api-version=%s", model_, apiVersion)

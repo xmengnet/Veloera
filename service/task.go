@@ -1,7 +1,7 @@
 package service
 
 import (
-	"one-api/constant"
+	"veloera/constant"
 	"strings"
 )
 

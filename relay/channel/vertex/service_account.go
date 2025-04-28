@@ -10,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"net/http"
 	"net/url"
-	relaycommon "one-api/relay/common"
+	relaycommon "veloera/relay/common"
 	"strings"
 
 	"fmt"

@@ -3,8 +3,8 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
-	"one-api/constant"
-	commonRelay "one-api/relay/common"
+	"veloera/constant"
+	commonRelay "veloera/relay/common"
 	"time"
 )
 

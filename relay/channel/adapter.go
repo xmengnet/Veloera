@@ -4,8 +4,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/dto"
-	relaycommon "one-api/relay/common"
+	"veloera/dto"
+	relaycommon "veloera/relay/common"
 )
 
 type Adaptor interface {

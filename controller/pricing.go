@@ -2,10 +2,10 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"one-api/middleware"
-	"one-api/model"
-	"one-api/setting"
-	"one-api/setting/operation_setting"
+	"veloera/middleware"
+	"veloera/model"
+	"veloera/setting"
+	"veloera/setting/operation_setting"
 )
 
 func GetPricing(c *gin.Context) {

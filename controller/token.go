@@ -3,8 +3,8 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"one-api/common"
-	"one-api/model"
+	"veloera/common"
+	"veloera/model"
 	"strconv"
 )
 

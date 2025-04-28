@@ -2,9 +2,9 @@ package router
 
 import (
 	"github.com/gin-gonic/gin"
-	"one-api/controller"
-	"one-api/middleware"
-	"one-api/relay"
+	"veloera/controller"
+	"veloera/middleware"
+	"veloera/relay"
 )
 
 func SetRelayRouter(router *gin.Engine) {

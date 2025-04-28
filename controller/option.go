@@ -3,10 +3,10 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
-	"one-api/common"
-	"one-api/model"
-	"one-api/setting"
-	"one-api/setting/system_setting"
+	"veloera/common"
+	"veloera/model"
+	"veloera/setting"
+	"veloera/setting/system_setting"
 	"strings"
 
 	"github.com/gin-gonic/gin"

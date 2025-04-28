@@ -1,6 +1,6 @@
 package cloudflare
 
-import "one-api/dto"
+import "veloera/dto"
 
 type CfRequest struct {
 	Messages    []dto.Message `json:"messages,omitempty"`

@@ -2,10 +2,10 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
-	"one-api/common"
-	"one-api/constant"
-	"one-api/model"
-	"one-api/setting/operation_setting"
+	"veloera/common"
+	"veloera/constant"
+	"veloera/model"
+	"veloera/setting/operation_setting"
 	"time"
 )
 

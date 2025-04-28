@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"one-api/common"
-	"one-api/setting"
+	"veloera/common"
+	"veloera/setting"
 	"strconv"
 	"time"
 

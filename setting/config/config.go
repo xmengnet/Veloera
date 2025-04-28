@@ -2,7 +2,7 @@ package config
 
 import (
 	"encoding/json"
-	"one-api/common"
+	"veloera/common"
 	"reflect"
 	"strconv"
 	"strings"

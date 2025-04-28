@@ -5,10 +5,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/dto"
-	"one-api/relay/channel/claude"
-	relaycommon "one-api/relay/common"
-	"one-api/setting/model_setting"
+	"veloera/dto"
+	"veloera/relay/channel/claude"
+	relaycommon "veloera/relay/common"
+	"veloera/setting/model_setting"
 )
 
 const (

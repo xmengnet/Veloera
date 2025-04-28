@@ -1,4 +1,4 @@
-module one-api
+module veloera
 
 // +heroku goVersion go1.18
 go 1.23.4

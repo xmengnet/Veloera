@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"one-api/relay/common"
+	"veloera/relay/common"
 )
 
 func ModelMappedHelper(c *gin.Context, info *common.RelayInfo) error {

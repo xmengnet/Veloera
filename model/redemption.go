@@ -3,7 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
-	"one-api/common"
+	"veloera/common"
 	"strconv"
 
 	"gorm.io/gorm"

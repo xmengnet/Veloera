@@ -1,7 +1,7 @@
 package service
 
 import (
-	"one-api/setting"
+	"veloera/setting"
 )
 
 func GetCallbackAddress() string {

@@ -110,7 +110,7 @@ docker-compose up -d
 ## 📝 项目说明
 
 > [!NOTE]
-> 本项目为开源项目，在[One API](https://github.com/songquanpeng/one-api)的基础上进行二次开发
+> 本项目为开源项目，在[One API](https://github.com/songquanpeng/veloera)的基础上进行二次开发
 
 > [!IMPORTANT]
 > - 本项目仅供个人学习使用，不保证稳定性，且不提供任何技术支持。
@@ -246,7 +246,7 @@ docker run --name new-api -d --restart always -p 3000:3000 -e SQL_DSN="root:1234
 - [Claude聊天接口（messages）](https://docs.newapi.pro/api/anthropic-chat)
 
 ## 相关项目
-- [One API](https://github.com/songquanpeng/one-api)：原版项目
+- [One API](https://github.com/songquanpeng/veloera)：原版项目
 - [Midjourney-Proxy](https://github.com/novicezk/midjourney-proxy)：Midjourney接口支持
 - [chatnio](https://github.com/Deeptrain-Community/chatnio)：下一代AI一站式B/C端解决方案
 - [neko-api-key-tool](https://github.com/Calcium-Ion/neko-api-key-tool)：用key查询使用额度

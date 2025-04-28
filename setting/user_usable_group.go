@@ -2,7 +2,7 @@ package setting
 
 import (
 	"encoding/json"
-	"one-api/common"
+	"veloera/common"
 )
 
 var userUsableGroups = map[string]string{

@@ -1,6 +1,6 @@
 package operation_setting
 
-import "one-api/setting/config"
+import "veloera/setting/config"
 
 type GeneralSetting struct {
 	DocsLink            string `json:"docs_link"`

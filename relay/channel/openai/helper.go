@@ -2,12 +2,12 @@ package openai
 
 import (
 	"encoding/json"
-	"one-api/common"
-	"one-api/dto"
-	relaycommon "one-api/relay/common"
-	relayconstant "one-api/relay/constant"
-	"one-api/relay/helper"
-	"one-api/service"
+	"veloera/common"
+	"veloera/dto"
+	relaycommon "veloera/relay/common"
+	relayconstant "veloera/relay/constant"
+	"veloera/relay/helper"
+	"veloera/service"
 	"strings"
 
 	"github.com/gin-gonic/gin"

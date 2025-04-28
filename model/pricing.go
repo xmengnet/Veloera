@@ -1,8 +1,8 @@
 package model
 
 import (
-	"one-api/common"
-	"one-api/setting/operation_setting"
+	"veloera/common"
+	"veloera/setting/operation_setting"
 	"sync"
 	"time"
 )

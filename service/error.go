@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"one-api/common"
-	"one-api/dto"
+	"veloera/common"
+	"veloera/dto"
 	"strconv"
 	"strings"
 )

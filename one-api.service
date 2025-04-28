@@ -1,16 +1,16 @@
-# File path: /etc/systemd/system/one-api.service
+# File path: /etc/systemd/system/veloera.service
 # sudo systemctl daemon-reload
-# sudo systemctl start one-api
-# sudo systemctl enable one-api
-# sudo systemctl status one-api
+# sudo systemctl start veloera
+# sudo systemctl enable veloera
+# sudo systemctl status veloera
 [Unit]
 Description=One API Service
 After=network.target
 
 [Service]
 User=ubuntu  # 注意修改用户名
-WorkingDirectory=/path/to/one-api  # 注意修改路径
-ExecStart=/path/to/one-api/one-api --port 3000 --log-dir /path/to/one-api/logs  # 注意修改路径和端口号
+WorkingDirectory=/path/to/veloera  # 注意修改路径
+ExecStart=/path/to/veloera/veloera --port 3000 --log-dir /path/to/veloera/logs  # 注意修改路径和端口号
 Restart=always
 RestartSec=5
 

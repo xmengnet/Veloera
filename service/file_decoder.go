@@ -4,8 +4,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"one-api/constant"
-	"one-api/dto"
+	"veloera/constant"
+	"veloera/dto"
 )
 
 func GetFileBase64FromUrl(url string) (*dto.LocalFileData, error) {

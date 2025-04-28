@@ -1,8 +1,8 @@
 package service
 
 import (
-	"one-api/dto"
-	relaycommon "one-api/relay/common"
+	"veloera/dto"
+	relaycommon "veloera/relay/common"
 
 	"github.com/gin-gonic/gin"
 )

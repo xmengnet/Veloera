@@ -7,8 +7,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/dto"
-	"one-api/service"
+	"veloera/dto"
+	"veloera/service"
 	"strings"
 )
 

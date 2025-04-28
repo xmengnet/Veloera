@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
-	"one-api/common"
-	"one-api/dto"
-	relaycommon "one-api/relay/common"
-	"one-api/service"
-	"one-api/setting"
-	"one-api/setting/operation_setting"
+	"veloera/common"
+	"veloera/dto"
+	relaycommon "veloera/relay/common"
+	"veloera/service"
+	"veloera/setting"
+	"veloera/setting/operation_setting"
 )
 
 func WssHelper(c *gin.Context, ws *websocket.Conn) (openaiErr *dto.OpenAIErrorWithStatusCode) {

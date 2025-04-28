@@ -7,10 +7,10 @@ import (
 	"github.com/gorilla/websocket"
 	"io"
 	"net/http"
-	common2 "one-api/common"
-	"one-api/relay/common"
-	"one-api/relay/constant"
-	"one-api/service"
+	common2 "veloera/common"
+	"veloera/relay/common"
+	"veloera/relay/constant"
+	"veloera/service"
 )
 
 func SetupApiRequestHeader(info *common.RelayInfo, c *gin.Context, req *http.Header) {

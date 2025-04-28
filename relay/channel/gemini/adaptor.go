@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"one-api/common"
-	"one-api/dto"
-	"one-api/relay/channel"
-	relaycommon "one-api/relay/common"
-	"one-api/service"
-	"one-api/setting/model_setting"
+	"veloera/common"
+	"veloera/dto"
+	"veloera/relay/channel"
+	relaycommon "veloera/relay/common"
+	"veloera/service"
+	"veloera/setting/model_setting"
 
 	"strings"
 

@@ -6,10 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
-	"one-api/dto"
-	"one-api/relay/channel"
-	relaycommon "one-api/relay/common"
-	"one-api/relay/constant"
+	"veloera/dto"
+	"veloera/relay/channel"
+	relaycommon "veloera/relay/common"
+	"veloera/relay/constant"
 )
 
 type Adaptor struct {

@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"one-api/common"
-	"one-api/dto"
-	relaycommon "one-api/relay/common"
-	relayconstant "one-api/relay/constant"
-	"one-api/relay/helper"
-	"one-api/service"
+	"veloera/common"
+	"veloera/dto"
+	relaycommon "veloera/relay/common"
+	relayconstant "veloera/relay/constant"
+	"veloera/relay/helper"
+	"veloera/service"
 )
 
 func getEmbeddingPromptToken(embeddingRequest dto.EmbeddingRequest) int {

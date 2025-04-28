@@ -2,8 +2,8 @@ package model
 
 import (
 	"log"
-	"one-api/common"
-	"one-api/constant"
+	"veloera/common"
+	"veloera/constant"
 	"os"
 	"strings"
 	"sync"
@@ -145,8 +145,8 @@ func chooseDB(envName string) (*gorm.DB, error) {
 	common.SysLog("SQL_DSN not set, using SQLite as database")
 	common.UsingSQLite = true
 
-	// Check and migrate from one-api.db to veloera.db
-	oldPaths := []string{"./one-api.db", "./data/one-api.db"}
+	// Check and migrate from veloera.db to veloera.db
+	oldPaths := []string{"./veloera.db", "./data/veloera.db"}
 	newPaths := []string{"./veloera.db", "./data/veloera.db"}
 
 	for i, oldPath := range oldPaths {

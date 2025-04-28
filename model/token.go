@@ -3,7 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
-	"one-api/common"
+	"veloera/common"
 	"strings"
 
 	"github.com/bytedance/gopkg/util/gopool"

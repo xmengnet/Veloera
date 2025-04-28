@@ -1,10 +1,10 @@
 package model
 
 import (
-	"one-api/common"
-	"one-api/setting"
-	"one-api/setting/config"
-	"one-api/setting/operation_setting"
+	"veloera/common"
+	"veloera/setting"
+	"veloera/setting/config"
+	"veloera/setting/operation_setting"
 	"strconv"
 	"strings"
 	"time"
