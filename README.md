@@ -1,9 +1,9 @@
 # Veloera
 
-[![Codacy Badge](https://app.codacy.com/project/badge/Grade/717a063ac5b8435cb78c8c3e71e6c5f3)](https://app.codacy.com/gh/Veloera/Veloera/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)[![Go Report Card](https://goreportcard.com/badge/github.com/Veloera/Veloera)](https://goreportcard.com/report/github.com/Veloera/Veloera)
-[![License](https://img.shields.io/github/license/Veloera/Veloera)](https://github.com/Veloera/Veloera/blob/main/LICENSE)[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Veloera/Veloera)](https://github.com/Veloera/Veloera/releases)
+[![Codacy Badge](https://app.codacy.com/project/badge/Grade/717a063ac5b8435cb78c8c3e71e6c5f3)](https://app.codacy.com/gh/Veloera/Veloera/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) [![Go Report Card](https://goreportcard.com/badge/github.com/Veloera/Veloera)](https://goreportcard.com/report/github.com/Veloera/Veloera)
+[![License](https://img.shields.io/github/license/Veloera/Veloera)](https://github.com/Veloera/Veloera/blob/main/LICENSE) [![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/Veloera/Veloera)](https://github.com/Veloera/Veloera/releases)
   
-[![GitHub stars](https://img.shields.io/github/stars/Veloera/Veloera?style=social)](https://github.com/Veloera/Veloera/stargazers)[![Build Status](https://github.com/Veloera/Veloera/actions/workflows/docker.yml/badge.svg)](https://github.com/Veloera/Veloera/actions/workflows/docker.yml)[![Build Status](https://github.com/Veloera/Veloera/actions/workflows/release.yml/badge.svg)](https://github.com/Veloera/Veloera/actions/workflows/release.yml)
+[![GitHub stars](https://img.shields.io/github/stars/Veloera/Veloera?style=social)](https://github.com/Veloera/Veloera/stargazers) [![Build Status](https://github.com/Veloera/Veloera/actions/workflows/docker.yml/badge.svg)](https://github.com/Veloera/Veloera/actions/workflows/docker.yml) [![Build Status](https://github.com/Veloera/Veloera/actions/workflows/release.yml/badge.svg)](https://github.com/Veloera/Veloera/actions/workflows/release.yml)
 
 
 优秀的 AI API 网关系统
