@@ -34,8 +34,8 @@ jobs:
           CI: ""
         run: |
           cd web
-          npm ci
-          REACT_APP_VERSION=$(git describe --tags) npm run build
+          npm install
+          VITE_REACT_APP_VERSION=$(git describe --tags) npm run build
           cd ..
       
       - name: Setup Go
@@ -86,8 +86,8 @@ jobs:
           CI: ""
         run: |
           cd web
-          npm ci
-          REACT_APP_VERSION=$(git describe --tags) npm run build
+          npm install
+          VITE_REACT_APP_VERSION=$(git describe --tags) npm run build
           cd ..
       
       - name: Setup Go
@@ -127,8 +127,8 @@ jobs:
           CI: ""
         run: |
           cd web
-          npm ci
-          REACT_APP_VERSION=$(git describe --tags) npm run build
+          npm install
+          VITE_REACT_APP_VERSION=$(git describe --tags) npm run build
           cd ..
       
       - name: Setup Go
