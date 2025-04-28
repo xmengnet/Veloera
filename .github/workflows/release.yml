@@ -7,6 +7,12 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Tag name for release (e.g. v1.0.0)'
+        required: true
+        type: string
 
 jobs:
   build-linux:
@@ -22,8 +28,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: 'npm'
-          cache-dependency-path: 'web/package-lock.json'
       
       - name: Build Frontend
         env:
@@ -76,8 +80,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: 'npm'
-          cache-dependency-path: 'web/package-lock.json'
       
       - name: Build Frontend
         env:
@@ -119,8 +121,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: 'npm'
-          cache-dependency-path: 'web/package-lock.json'
       
       - name: Build Frontend
         env:
@@ -153,7 +153,7 @@ jobs:
     name: Create and Publish Release
     needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
