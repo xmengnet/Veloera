@@ -782,6 +782,31 @@ const EditChannel = (props) => {
               onChange={(value) => {
                 handleInputChange('key', value);
               }}
+              onPaste={(e) => {
+                // 获取剪贴板数据
+                const clipboardData = e.clipboardData || window.clipboardData;
+                const pastedData = clipboardData.getData('Text');
+                
+                // 检查是否包含换行符
+                if (pastedData.includes('\n')) {
+                  e.preventDefault(); // 阻止默认粘贴行为
+                  
+                  // 处理多行文本
+                  let processedText = pastedData;
+                  
+                  // 检查最后一个换行后是否为空行
+                  if (processedText.endsWith('\n') || processedText.endsWith('\r\n')) {
+                    // 移除最后的换行符
+                    processedText = processedText.replace(/[\r\n]+$/, '');
+                  }
+                  
+                  // 替换所有换行符为逗号
+                  processedText = processedText.replace(/[\r\n]+/g, ',');
+                  
+                  // 更新输入值
+                  handleInputChange('key', inputs.key ? inputs.key + processedText : processedText);
+                }
+              }}
               value={inputs.key || (isEdit ? initialKey : '')}
               autoComplete='new-password'
               addonAfter={
