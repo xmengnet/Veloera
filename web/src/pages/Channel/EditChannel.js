@@ -30,7 +30,13 @@ import {
   Col,
 } from '@douyinfe/semi-ui';
 import { getChannelModels, loadChannelModels } from '../../components/utils.js';
-import { IconEyeOpened, IconEyeClosedSolid, IconRefresh } from '@douyinfe/semi-icons';
+import {
+  IconEyeOpened,
+  IconEyeClosedSolid,
+  IconRefresh,
+  IconPlusCircle,
+  IconMinusCircle
+} from '@douyinfe/semi-icons';
 
 // ModelSelector component for advanced model selection
 const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModels, onSelect }) => {
@@ -39,18 +45,18 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
   const [localSelectedModels, setLocalSelectedModels] = useState([...selectedModels]);
   const [search, setSearch] = useState('');
   const [availableModels, setAvailableModels] = useState([]);
-  
+
   // Create options from available models
   const allOptions = availableModels.map(model => ({
     label: model,
     value: model
   }));
-  
+
   // Filter models based on search input
-  const filteredOptions = allOptions.filter(option => 
+  const filteredOptions = allOptions.filter(option =>
     option.label.toLowerCase().includes(search.toLowerCase())
   );
-  
+
   // Handle check/uncheck of individual model
   const handleCheckboxChange = (value) => {
     if (localSelectedModels.includes(value)) {
@@ -59,7 +65,7 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
       setLocalSelectedModels([...localSelectedModels, value]);
     }
   };
-  
+
   // Select all visible models
   const handleSelectAll = () => {
     const allValues = filteredOptions.map(option => option.value);
@@ -67,12 +73,12 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
     const newSelection = [...new Set([...localSelectedModels, ...allValues])];
     setLocalSelectedModels(newSelection);
   };
-  
+
   // Invert selection for all visible models
   const handleDeselectAll = () => {
     const visibleValues = new Set(filteredOptions.map(option => option.value));
     const newSelection = [...localSelectedModels];
-    
+
     // For each visible option, toggle its selection state
     filteredOptions.forEach(option => {
       const value = option.value;
@@ -82,20 +88,20 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
         newSelection.push(value);
       } else {
         // If selected, remove it
-        newSelection.splice(index, 1);
+        newSelection.splice(index, index + 1); // Use index + 1 for correct splice
       }
     });
-    
+
     setLocalSelectedModels(newSelection);
   };
-  
+
   // Fetch models from API - using the same logic as fetchUpstreamModelList
   const fetchModels = async () => {
     try {
       setLoading(true);
       const models = [...localSelectedModels]; // Keep existing selections
       let res;
-      
+
       if (isEdit && channelId) {
         // If in edit mode, get models from the existing channel
         res = await API.get('/api/channel/fetch_models/' + channelId);
@@ -106,27 +112,27 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
           setLoading(false);
           return;
         }
-        
+
         res = await API.post('/api/channel/fetch_models', {
           base_url: baseUrl,
           type: type,
           key: apiKey,
         });
       }
-      
+
       if (res.data && res.data.success) {
         // Get models from the response
         let fetchedModels = [];
-        
+
         if (Array.isArray(res.data.data)) {
           fetchedModels = res.data.data;
         } else if (res.data.data && Array.isArray(res.data.data.data)) {
           fetchedModels = res.data.data.data;
         }
-        
+
         // Update available models
         setAvailableModels(fetchedModels);
-        
+
         // Show success message
         showSuccess(t('获取模型列表成功'));
       } else {
@@ -138,38 +144,38 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
       setLoading(false);
     }
   };
-  
+
   // Apply selection and close modal
   const applySelection = () => {
     onSelect(localSelectedModels);
     Modal.destroyAll();
   };
-  
+
   // Load models when component mounts
   useEffect(() => {
     fetchModels();
   }, []);
-  
+
   return (
     <div>
       <div style={{ display: 'flex', marginBottom: 16, alignItems: 'center' }}>
-        <Input 
+        <Input
           placeholder={t('搜索模型')}
           value={search}
           onChange={setSearch}
           style={{ flex: 1 }}
           showClear
         />
-        <Button 
-          icon={<IconRefresh />} 
-          onClick={fetchModels} 
+        <Button
+          icon={<IconRefresh />}
+          onClick={fetchModels}
           loading={loading}
           style={{ marginLeft: 8 }}
         />
         <Button onClick={handleSelectAll} style={{ marginLeft: 8 }}>{t('全选')}</Button>
         <Button onClick={handleDeselectAll} style={{ marginLeft: 8 }}>{t('反选')}</Button>
       </div>
-      
+
       <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid var(--semi-color-border)', padding: 8 }}>
         <Row>
           {filteredOptions.map((option) => (
@@ -179,12 +185,12 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
                 onChange={() => handleCheckboxChange(option.value)}
                 style={{ width: '100%' }}
               >
-                <Typography.Text 
-                  ellipsis={{ showTooltip: true }} 
-                  style={{ 
-                    maxWidth: '100%', 
-                    wordBreak: 'break-word', 
-                    whiteSpace: 'normal', 
+                <Typography.Text
+                  ellipsis={{ showTooltip: true }}
+                  style={{
+                    maxWidth: '100%',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'normal',
                     lineHeight: '1.2'
                   }}
                 >
@@ -195,7 +201,7 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
           ))}
         </Row>
       </div>
-      
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 8 }}>
         <Button type='primary' onClick={applySelection}>{t('确定')}</Button>
         <Button style={{ marginLeft: 8 }} onClick={() => Modal.destroyAll()}>{t('取消')}</Button>
@@ -222,7 +228,7 @@ function type2secretPrompt(type) {
     case 15:
       return '按照如下格式输入：APIKey|SecretKey，多个密钥使用英文逗号分隔';
     case 18:
-      return '按照如下格式输入：APPID|APISecret|APIKey，多个密钥使用英文逗号分隔';
+      return '按照如下格式输入：APPID|APISecret|APIKey，多个密钥使用英文逗文分隔';
     case 22:
       return '按照如下格式输入：APIKey-AppId，例如：fastgpt-0sp2gtvfdgyi4k30jwlgwf1i-64f335d84283f05518e9e041，多个密钥使用英文逗号分隔';
     case 23:
@@ -242,9 +248,16 @@ const EditChannel = (props) => {
   const [loading, setLoading] = useState(isEdit);
   const [showKey, setShowKey] = useState(false);
   const [initialKey, setInitialKey] = useState('');
+  const [keyList, setKeyList] = useState([]);
+  const [useKeyListMode, setUseKeyListMode] = useState(false);
+
+  // Ref to store the input element that triggered the switch to list mode
+  const singleKeyInputRef = useRef(null);
+
   const handleCancel = () => {
     props.handleClose();
   };
+
   const originInputs = {
     name: '',
     type: 1,
@@ -262,10 +275,13 @@ const EditChannel = (props) => {
     priority: 0,
     weight: 0,
     tag: '',
+    model_prefix: '', // Added model_prefix
+    setting: '', // Added setting
+    param_override: '', // Added param_override
   };
+
   const [batch, setBatch] = useState(false);
   const [autoBan, setAutoBan] = useState(true);
-  // const [autoBan, setAutoBan] = useState(true);
   const [inputs, setInputs] = useState(originInputs);
   const [originModelOptions, setOriginModelOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
@@ -273,6 +289,56 @@ const EditChannel = (props) => {
   const [basicModels, setBasicModels] = useState([]);
   const [fullModels, setFullModels] = useState([]);
   const [customModel, setCustomModel] = useState('');
+
+  // 处理密钥列表的变化
+  const updateKeyListToInput = (newKeyList) => {
+    // Filter out empty strings before joining
+    const filteredKeyList = newKeyList.filter(key => key.trim().length > 0);
+    setKeyList(filteredKeyList);
+    const combinedKey = filteredKeyList.join(',');
+
+    // If only one valid key remains, switch back to single input mode
+    if (filteredKeyList.length <= 1 && inputs.type !== 41) { // Type 41 always uses textarea
+        setUseKeyListMode(false);
+        // When switching back, ensure the single input shows the remaining key
+        setInputs(inputs => ({ ...inputs, key: combinedKey }));
+        // Optionally reset showKey based on preference for single input
+        // setShowKey(false); // Or keep the last showKey state
+    } else {
+        // Otherwise, update the main inputs.key based on the list
+        setInputs(inputs => ({ ...inputs, key: combinedKey }));
+    }
+  };
+
+  // Add a new key input box
+  const addKeyInput = (initialValue = '') => {
+     const newKeyList = [...keyList, initialValue];
+    setKeyList(newKeyList);
+    // Focus on the new input after it's rendered
+    setTimeout(() => {
+      const inputs = document.querySelectorAll('.key-input-item input');
+      if (inputs.length > 0) {
+        inputs[inputs.length - 1].focus();
+      }
+    }, 0);
+  };
+
+  // Remove a key input box
+  const removeKeyInput = (index) => {
+    const newKeyList = [...keyList];
+    newKeyList.splice(index, 1);
+    updateKeyListToInput(newKeyList);
+  };
+
+  // Update specific index key value
+  const updateKeyAtIndex = (index, value) => {
+    const newKeyList = [...keyList];
+    newKeyList[index] = value;
+    setKeyList(newKeyList); // Update local state immediately for smooth typing
+    // Delay updating the main inputs.key state to avoid performance issues during typing
+    // The main inputs.key will be updated by updateKeyListToInput when adding/removing or on submit
+  };
+
   const handleInputChange = (name, value) => {
     if (name === 'base_url' && value.endsWith('/v1')) {
       Modal.confirm({
@@ -285,8 +351,79 @@ const EditChannel = (props) => {
       });
       return;
     }
+
+    // Special handling for key input when not in key list mode and not type 41
+    if (name === 'key' && !useKeyListMode && inputs.type !== 41) {
+      // Check if the new value contains comma or newline
+      if (value.includes(',') || value.includes('\n')) {
+        // Switch to list mode
+        setUseKeyListMode(true);
+        setShowKey(true); // Switch to plain text display
+
+        // Process the input value to create the initial key list
+        const keys = value
+          .split(/[,\n]/)
+          .map(k => k.trim())
+          .filter(k => k.length > 0);
+
+         // If there are keys, set the list and focus the first input
+         if (keys.length > 0) {
+            setKeyList(keys);
+             // Focus the first input after switching to list mode
+             setTimeout(() => {
+               const inputs = document.querySelectorAll('.key-input-item input');
+               if (inputs.length > 0) {
+                 inputs[0].focus();
+               }
+            }, 0);
+         } else {
+             // If splitting resulted in no keys, stay in single mode but update input value
+             setInputs((inputs) => ({ ...inputs, [name]: value }));
+             setUseKeyListMode(false); // Ensure we don't switch to list mode with empty list
+         }
+
+
+        // The main inputs.key will be updated by updateKeyListToInput based on the list state
+        return; // Prevent updating inputs.key directly here
+      }
+    }
+
     setInputs((inputs) => ({ ...inputs, [name]: value }));
+
     if (name === 'type') {
+      // Reset key list mode when type changes, unless it's type 41
+      if (value === 41) {
+        setUseKeyListMode(false); // Type 41 uses a single textarea
+        setKeyList([]); // Clear keyList if switching to type 41
+      } else if (inputs.type === 41 && value !== 41) {
+         // If switching from type 41 to another type, check if the key contains commas/newlines
+         if (inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
+            setUseKeyListMode(true);
+            setShowKey(true);
+            const keys = inputs.key
+              .split(/[,\n]/)
+              .map(k => k.trim())
+              .filter(k => k.length > 0);
+            setKeyList(keys);
+         } else {
+            setUseKeyListMode(false);
+            setKeyList([]); // Clear keyList if switching from type 41 to single mode
+         }
+      } else if (value !== 41 && inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
+           // If changing type between non-41 types, and key already contains multi-keys
+           setUseKeyListMode(true);
+           setShowKey(true);
+            const keys = inputs.key
+              .split(/[,\n]/)
+              .map(k => k.trim())
+              .filter(k => k.length > 0);
+            setKeyList(keys);
+      } else {
+         setUseKeyListMode(false);
+         setKeyList([]); // Clear keyList if switching to single mode
+      }
+
+
       let localModels = [];
       switch (value) {
         case 2:
@@ -327,18 +464,18 @@ const EditChannel = (props) => {
           localModels = getChannelModels(value);
           break;
       }
-      if (inputs.models.length === 0) {
+      if (inputs.models.length === 0 || inputs.type !== value) { // Only update models if type changes or models are empty
         setInputs((inputs) => ({ ...inputs, models: localModels }));
       }
       setBasicModels(localModels);
     }
-    //setAutoBan
   };
 
   const loadChannel = async () => {
     setLoading(true);
     let res = await API.get(`/api/channel/${channelId}`);
     if (res === undefined) {
+      setLoading(false);
       return;
     }
     const { success, message, data } = res.data;
@@ -360,6 +497,54 @@ const EditChannel = (props) => {
           2,
         );
       }
+      if (data.setting !== '' && data.setting !== null) { // Handle null setting
+        try { // Add try-catch in case it's not valid JSON
+           data.setting = JSON.stringify(
+             JSON.parse(data.setting),
+             null,
+             2,
+           );
+        } catch (e) {
+           console.error("Failed to parse channel setting:", data.setting, e);
+           data.setting = data.setting; // Keep as is if invalid JSON
+        }
+      } else {
+          data.setting = ''; // Ensure it's an empty string if null
+      }
+       if (data.param_override !== '' && data.param_override !== null) { // Handle null param_override
+         try { // Add try-catch in case it's not valid JSON
+            data.param_override = JSON.stringify(
+              JSON.parse(data.param_override),
+              null,
+              2,
+            );
+         } catch (e) {
+            console.error("Failed to parse channel param_override:", data.param_override, e);
+            data.param_override = data.param_override; // Keep as is if invalid JSON
+         }
+      } else {
+          data.param_override = ''; // Ensure it's an empty string if null
+      }
+
+
+      // 处理密钥
+      if (data.key && data.type !== 41) {
+         const keys = data.key.split(',').map(k => k.trim()).filter(k => k.length > 0);
+         if (keys.length > 1) {
+           setUseKeyListMode(true);
+           setShowKey(true); // Ensure showKey is true for list mode
+           setKeyList(keys);
+         } else {
+           setUseKeyListMode(false);
+           setKeyList([]); // Clear keyList if not in list mode
+         }
+      } else {
+        setUseKeyListMode(false);
+        setKeyList([]);
+      }
+       setInitialKey(data.key); // Store initial key for single input mode placeholder
+
+
       setInputs(data);
       if (data.auto_ban === 0) {
         setAutoBan(false);
@@ -367,7 +552,6 @@ const EditChannel = (props) => {
         setAutoBan(true);
       }
       setBasicModels(getChannelModels(data.type));
-      // console.log(data);
     } else {
       showError(message);
     }
@@ -382,12 +566,13 @@ const EditChannel = (props) => {
     setLoading(true);
     const models = inputs['models'] || [];
     let err = false;
+    let fetchedModels = [];
 
     if (isEdit) {
       // 如果是编辑模式，使用已有的channel id获取模型列表
       const res = await API.get('/api/channel/fetch_models/' + channelId);
       if (res.data && res.data?.success) {
-        models.push(...res.data.data);
+        fetchedModels = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.data || []);
       } else {
         err = true;
       }
@@ -405,7 +590,7 @@ const EditChannel = (props) => {
           });
 
           if (res.data && res.data.success) {
-            models.push(...res.data.data);
+             fetchedModels = Array.isArray(res.data.data) ? res.data.data : (res.data.data?.data || []);
           } else {
             err = true;
           }
@@ -417,7 +602,8 @@ const EditChannel = (props) => {
     }
 
     if (!err) {
-      handleInputChange(name, Array.from(new Set(models)));
+       const combinedModels = Array.from(new Set([...models, ...fetchedModels]));
+      handleInputChange(name, combinedModels);
       showSuccess(t('获取模型列表成功'));
     } else {
       showError(t('获取模型列表失败'));
@@ -437,7 +623,7 @@ const EditChannel = (props) => {
       setBasicModels(
         res.data.data
           .filter((model) => {
-            return model.id.startsWith('gpt-') || model.id.startsWith('text-');
+            return model.id.startsWith('gpt-') || model.id.startsWith('text-') || model.id.startsWith('claude-'); // Added claude for basic
           })
           .map((model) => model.id),
       );
@@ -483,13 +669,26 @@ const EditChannel = (props) => {
       loadChannel().then(() => { });
     } else {
       setInputs(originInputs);
-      let localModels = getChannelModels(inputs.type);
+      let localModels = getChannelModels(originInputs.type); // Use originInputs.type for initial state
       setBasicModels(localModels);
       setInputs((inputs) => ({ ...inputs, models: localModels }));
     }
   }, [props.editingChannel.id]);
 
+   useEffect(() => {
+       // When switching back from list mode to single mode, ensure the single input is focused
+       if (!useKeyListMode && singleKeyInputRef.current) {
+           singleKeyInputRef.current.focus();
+       }
+   }, [useKeyListMode]);
+
+
   const submit = async () => {
+     // Update inputs.key from keyList before submitting if in list mode
+     if (useKeyListMode) {
+       updateKeyListToInput(keyList);
+     }
+
     if (!isEdit && (inputs.name === '' || inputs.key === '')) {
       showInfo(t('请填写渠道名称和渠道密钥！'));
       return;
@@ -499,9 +698,26 @@ const EditChannel = (props) => {
       return;
     }
     if (inputs.model_mapping !== '' && !verifyJSON(inputs.model_mapping)) {
-      showInfo(t('模型映射必须是合法的 JSON 格式！'));
+      showInfo(t('模型映射必须是合法的 JSON格式！'));
       return;
     }
+     if (inputs.setting !== '' && !verifyJSON(inputs.setting)) {
+      showInfo(t('渠道额外设置必须是合法的 JSON 格式！'));
+      return;
+    }
+     if (inputs.param_override !== '' && !verifyJSON(inputs.param_override)) {
+      showInfo(t('参数覆盖必须是合法的 JSON 格式！'));
+      return;
+    }
+     if (inputs.other !== '' && inputs.type === 41) {
+        // For type 41, check if it's JSON only if it starts with {
+        if (inputs.other.trim().startsWith('{') && !verifyJSON(inputs.other)) {
+             showInfo(t('部署地区必须是合法的 JSON 格式或纯文本！'));
+             return;
+        }
+     }
+
+
     let localInputs = { ...inputs };
     if (localInputs.base_url && localInputs.base_url.endsWith('/')) {
       localInputs.base_url = localInputs.base_url.slice(
@@ -521,6 +737,21 @@ const EditChannel = (props) => {
     localInputs.auto_ban = autoBan ? 1 : 0;
     localInputs.models = localInputs.models.join(',');
     localInputs.group = localInputs.groups.join(',');
+
+    // Ensure other is string for type 41 if it was JSON
+     if (localInputs.type === 41 && typeof localInputs.other !== 'string') {
+        localInputs.other = JSON.stringify(localInputs.other);
+     }
+
+     // Ensure setting and param_override are strings if they are objects (parsed from JSON)
+     if (typeof localInputs.setting !== 'string') {
+        localInputs.setting = JSON.stringify(localInputs.setting);
+     }
+     if (typeof localInputs.param_override !== 'string') {
+        localInputs.param_override = JSON.stringify(localInputs.param_override);
+     }
+
+
     if (isEdit) {
       res = await API.put(`/api/channel/`, {
         ...localInputs,
@@ -535,7 +766,10 @@ const EditChannel = (props) => {
         showSuccess(t('渠道更新成功！'));
       } else {
         showSuccess(t('渠道创建成功！'));
-        setInputs(originInputs);
+        setInputs(originInputs); // Reset form for new creation
+        setKeyList([]); // Clear keyList state
+        setUseKeyListMode(false); // Reset list mode
+        setShowKey(false); // Reset showKey
       }
       props.refresh();
       props.handleClose();
@@ -546,31 +780,240 @@ const EditChannel = (props) => {
 
   const addCustomModels = () => {
     if (customModel.trim() === '') return;
-    const modelArray = customModel.split(',').map((model) => model.trim());
+    // Split by comma, newline, or space
+    const modelArray = customModel.split(/[\s,]+/).map((model) => model.trim()).filter(model => model.length > 0);
+
 
     let localModels = [...inputs.models];
     let localModelOptions = [...modelOptions];
     let hasError = false;
+    let addedCount = 0;
 
     modelArray.forEach((model) => {
       if (model && !localModels.includes(model)) {
         localModels.push(model);
         localModelOptions.push({
-          key: model,
-          text: model,
+          label: model, // Use label/value for Semi Select
           value: model,
         });
+        addedCount++;
       } else if (model) {
-        showError(t('某些模型已存在！'));
         hasError = true;
       }
     });
 
-    if (hasError) return;
+    if (hasError) {
+      showWarning(t('某些模型已存在，已忽略！'));
+    }
 
-    setModelOptions(localModelOptions);
-    setCustomModel('');
-    handleInputChange('models', localModels);
+    if (addedCount > 0) {
+       setModelOptions(localModelOptions);
+       handleInputChange('models', localModels);
+       setCustomModel(''); // Clear input only if something was added
+    }
+  };
+
+   // Handle key down event for key list input
+   const handleKeyInputKeyDown = (e, index) => {
+     if (e.key === 'Enter' || e.key === ',') {
+       e.preventDefault(); // Prevent default newline or comma
+       const currentValue = keyList[index].trim();
+       if (currentValue.length > 0) {
+         // If the current input has content, ensure it's in the list (handled by updateKeyAtIndex)
+         // Then add a new empty input below
+         addKeyInput();
+       } else if (e.key === 'Enter') {
+          // If Enter is pressed on an empty input, just add a new empty one
+           addKeyInput();
+       }
+       // If it's a comma on an empty input, do nothing (just prevent default)
+     } else if (e.key === 'Backspace' && keyList[index] === '' && keyList.length > 1 && index > 0) {
+        // If backspace is pressed on an empty input and there are other inputs before it
+         e.preventDefault(); // Prevent default backspace
+         const prevInput = document.querySelectorAll('.key-input-item input')[index - 1];
+         removeKeyInput(index);
+         // Focus on the previous input
+         if (prevInput) {
+             prevInput.focus();
+         }
+     }
+   };
+
+   // Handle paste event for key list input
+   const handleKeyInputPaste = (e, index) => {
+      const clipboardData = e.clipboardData || window.clipboardData;
+      const pastedData = clipboardData.getData('Text');
+
+      // Check if pasted data contains newline or comma
+      if (pastedData.includes('\n') || pastedData.includes(',')) {
+         e.preventDefault(); // Prevent default paste behavior
+
+         // Get current value in the input where pasting
+         const currentValue = keyList[index];
+
+         // Process the pasted data and the current value
+         const combinedValue = currentValue + pastedData;
+         const newKeys = combinedValue
+           .split(/[,\n]/) // Split by comma or newline
+           .map(k => k.trim())
+           .filter(k => k.length > 0); // Filter out empty strings
+
+         // Update the key list state
+         const newKeyList = [...keyList];
+         // Remove the original key at the current index
+         newKeyList.splice(index, 1);
+         // Insert the new keys at the current index
+         newKeyList.splice(index, 0, ...newKeys);
+
+         updateKeyListToInput(newKeyList); // Update state and sync with inputs.key
+
+          // Focus on the last inserted input if new ones were added
+         if (newKeys.length > 0) {
+             setTimeout(() => {
+                const inputs = document.querySelectorAll('.key-input-item input');
+                 if (inputs.length >= index + newKeys.length) {
+                    inputs[index + newKeys.length - 1].focus();
+                 }
+             }, 0);
+         } else {
+             // If pasted content resulted in no valid keys, focus on the previous input or the first if at index 0
+             setTimeout(() => {
+                 const inputs = document.querySelectorAll('.key-input-item input');
+                 if (inputs.length > 0) {
+                     const targetIndex = index > 0 ? index - 1 : 0;
+                     if (inputs[targetIndex]) {
+                         inputs[targetIndex].focus();
+                     }
+                 }
+             }, 0);
+         }
+      }
+      // If no newline or comma, allow default paste
+   };
+
+
+  // 渲染密钥输入组件
+  const renderKeyInput = () => {
+    // 多行文本框类型的渠道 (type 41)
+    if (inputs.type === 41) {
+      return (
+        <TextArea
+          label={t('密钥')}
+          name='key'
+          required
+          placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
+          onChange={(value) => {
+            handleInputChange('key', value);
+          }}
+          value={inputs.key || (isEdit ? initialKey : '')}
+          autoComplete='new-password'
+          autosize={{ minRows: 2 }}
+        />
+      );
+    }
+
+    // 使用列表模式显示多个密钥
+    if (useKeyListMode) {
+      return (
+        <div>
+          {keyList.map((key, index) => (
+            <div key={index} style={{ display: 'flex', marginBottom: '8px' }} className="key-input-item">
+              <Input
+                style={{ flex: 1 }}
+                value={key}
+                onChange={(value) => updateKeyAtIndex(index, value)}
+                onKeyDown={(e) => handleKeyInputKeyDown(e, index)}
+                 onPaste={(e) => handleKeyInputPaste(e, index)}
+                placeholder={t('请输入密钥')}
+              />
+              <Button
+                icon={<IconMinusCircle />}
+                type="danger"
+                theme="borderless"
+                onClick={() => removeKeyInput(index)}
+                style={{ marginLeft: '8px' }}
+                 disabled={keyList.length <= 1} // Disable remove if only one key left
+              />
+            </div>
+          ))}
+          <Button
+            icon={<IconPlusCircle />}
+            onClick={() => addKeyInput()}
+            style={{ marginTop: '8px' }}
+          >
+            {t('添加密钥')}
+          </Button>
+           <Typography.Text type="secondary" style={{ marginLeft: 16 }}>
+            {t('在输入框中输入逗号或回车可自动换行添加')}
+           </Typography.Text>
+        </div>
+      );
+    }
+
+    // 默认单行密钥输入
+    return (
+      <Input
+         ref={singleKeyInputRef} // Attach ref here
+        label={t('密钥')}
+        name='key'
+        required
+        type={showKey ? 'text' : 'password'}
+        placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
+        onChange={(value) => {
+          handleInputChange('key', value);
+        }}
+        onPaste={(e) => {
+          // Handle paste for single input mode to switch to list mode
+          const clipboardData = e.clipboardData || window.clipboardData;
+          const pastedData = clipboardData.getData('Text');
+
+          // Check if pasted data contains newline or comma
+          if (pastedData.includes('\n') || pastedData.includes(',')) {
+            e.preventDefault(); // Prevent default paste
+
+             // Prepend existing key if any
+             const combinedData = (inputs.key || '') + pastedData;
+
+             // Process the pasted data to switch to list mode
+            const keys = combinedData
+              .split(/[,\n]/)
+              .map(k => k.trim())
+              .filter(k => k.length > 0);
+
+            if (keys.length > 0) {
+                setUseKeyListMode(true);
+                setShowKey(true);
+                setKeyList(keys);
+                 // Update the main inputs.key state based on the new list
+                handleInputChange('key', keys.join(','));
+
+                 // Focus the first input after switching to list mode
+                 setTimeout(() => {
+                   const inputs = document.querySelectorAll('.key-input-item input');
+                   if (inputs.length > 0) {
+                     inputs[0].focus();
+                   }
+                }, 0);
+
+            } else {
+                // If splitting resulted in no keys, just update the input value (which is empty after split)
+                 handleInputChange('key', '');
+            }
+          }
+          // If no newline or comma, allow default paste (handled by onChange)
+        }}
+        value={inputs.key || (isEdit ? initialKey : '')}
+        autoComplete='new-password'
+        addonAfter={
+          <Button
+            theme="borderless"
+            icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
+            onClick={() => setShowKey(!showKey)}
+            style={{ padding: '0 4px' }}
+          />
+        }
+      />
+    );
   };
 
   return (
@@ -589,7 +1032,7 @@ const EditChannel = (props) => {
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
             <Space>
-              <Button theme='solid' size={'large'} onClick={submit}>
+              <Button theme='solid' size={'large'} onClick={submit} loading={loading}>
                 {t('提交')}
               </Button>
               <Button
@@ -597,6 +1040,7 @@ const EditChannel = (props) => {
                 size={'large'}
                 type={'tertiary'}
                 onClick={handleCancel}
+                disabled={loading}
               >
                 {t('取消')}
               </Button>
@@ -759,66 +1203,7 @@ const EditChannel = (props) => {
           <div style={{ marginTop: 10 }}>
             <Typography.Text strong>{t('密钥')}：</Typography.Text>
           </div>
-          {inputs.type === 41 ? (
-            <TextArea
-              label={t('密钥')}
-              name='key'
-              required
-              placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
-              onChange={(value) => {
-                handleInputChange('key', value);
-              }}
-              value={inputs.key || (isEdit ? initialKey : '')}
-              autoComplete='new-password'
-              autosize={{ minRows: 2 }}
-            />
-          ) : (
-            <Input
-              label={t('密钥')}
-              name='key'
-              required
-              type={showKey ? 'text' : 'password'}
-              placeholder={isEdit ? initialKey : t(type2secretPrompt(inputs.type))}
-              onChange={(value) => {
-                handleInputChange('key', value);
-              }}
-              onPaste={(e) => {
-                // 获取剪贴板数据
-                const clipboardData = e.clipboardData || window.clipboardData;
-                const pastedData = clipboardData.getData('Text');
-                
-                // 检查是否包含换行符
-                if (pastedData.includes('\n')) {
-                  e.preventDefault(); // 阻止默认粘贴行为
-                  
-                  // 处理多行文本
-                  let processedText = pastedData;
-                  
-                  // 检查最后一个换行后是否为空行
-                  if (processedText.endsWith('\n') || processedText.endsWith('\r\n')) {
-                    // 移除最后的换行符
-                    processedText = processedText.replace(/[\r\n]+$/, '');
-                  }
-                  
-                  // 替换所有换行符为逗号
-                  processedText = processedText.replace(/[\r\n]+/g, ',');
-                  
-                  // 更新输入值
-                  handleInputChange('key', inputs.key ? inputs.key + processedText : processedText);
-                }
-              }}
-              value={inputs.key || (isEdit ? initialKey : '')}
-              autoComplete='new-password'
-              addonAfter={
-                <Button
-                  theme="borderless"
-                  icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
-                  onClick={() => setShowKey(!showKey)}
-                  style={{ padding: '0 4px' }}
-                />
-              }
-            />
-          )}
+          {renderKeyInput()}
           {inputs.type === 22 && (
             <>
               <div style={{ marginTop: 10 }}>
@@ -1018,8 +1403,8 @@ const EditChannel = (props) => {
                   {t('获取模型列表')}
                 </Button>
               </Tooltip>
-              <Button 
-                style={{ marginLeft: 8 }} 
+              <Button
+                style={{ marginLeft: 8 }}
                 type='tertiary'
                 onClick={() => {
                   // Using Modal.info for better customization
@@ -1065,11 +1450,12 @@ const EditChannel = (props) => {
                   {t('填入')}
                 </Button>
               }
-              placeholder={t('输入自定义模型名称')}
+              placeholder={t('输入自定义模型名称，多个用逗号或空格分隔')}
               value={customModel}
               onChange={(value) => {
-                setCustomModel(value.trim());
+                setCustomModel(value); // Allow space and comma for input
               }}
+              onPressEnter={addCustomModels} // Add on press enter
             />
           </div>
           <div style={{ marginTop: 10 }}>
@@ -1234,7 +1620,7 @@ const EditChannel = (props) => {
                   '此项可选，用于覆盖请求参数。不支持覆盖 stream 参数。为一个 JSON 字符串，例如：',
                 ) + '\n{\n  "temperature": 0\n}'
               }
-              name='setting'
+              name='param_override'
               onChange={(value) => {
                 handleInputChange('param_override', value);
               }}
