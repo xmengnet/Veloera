@@ -240,6 +240,13 @@ function type2secretPrompt(type) {
   }
 }
 
+// Function to check if a channel type supports multi-key view (excluding type 41 which is textarea)
+const supportsMultiKeyView = (type) => {
+  // Add channel types here that support multi-key input via comma separation
+  const multiKeyTypes = [1, 3, 5, 8, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45]; // Example types, adjust as needed
+  return multiKeyTypes.includes(type);
+};
+
 const EditChannel = (props) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -250,6 +257,7 @@ const EditChannel = (props) => {
   const [initialKey, setInitialKey] = useState('');
   const [keyList, setKeyList] = useState([]);
   const [useKeyListMode, setUseKeyListMode] = useState(false);
+  const [disableMultiKeyView, setDisableMultiKeyView] = useState(false);
 
   // Ref to store the input element that triggered the switch to list mode
   const singleKeyInputRef = useRef(null);
@@ -297,8 +305,8 @@ const EditChannel = (props) => {
     setKeyList(filteredKeyList);
     const combinedKey = filteredKeyList.join(',');
 
-    // If only one valid key remains, switch back to single input mode
-    if (filteredKeyList.length <= 1 && inputs.type !== 41) { // Type 41 always uses textarea
+    // If only one valid key remains and not explicitly disabled multi-key view, switch back to single input mode
+    if (filteredKeyList.length <= 1 && supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
         setUseKeyListMode(false);
         // When switching back, ensure the single input shows the remaining key
         setInputs(inputs => ({ ...inputs, key: combinedKey }));
@@ -344,7 +352,7 @@ const EditChannel = (props) => {
       Modal.confirm({
         title: '警告',
         content:
-          '不需要在末尾加/v1，New API会自动处理，添加后可能导致请求失败，是否继续？',
+          '不需要在末尾加/v1，Veloera会自动处理，添加后可能导致请求失败，是否继续？',
         onOk: () => {
           setInputs((inputs) => ({ ...inputs, [name]: value }));
         },
@@ -352,8 +360,8 @@ const EditChannel = (props) => {
       return;
     }
 
-    // Special handling for key input when not in key list mode and not type 41
-    if (name === 'key' && !useKeyListMode && inputs.type !== 41) {
+    // Special handling for key input when not in key list mode and not type 41, and multi-key view is not disabled
+    if (name === 'key' && !useKeyListMode && inputs.type !== 41 && supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
       // Check if the new value contains comma or newline
       if (value.includes(',') || value.includes('\n')) {
         // Switch to list mode
@@ -391,12 +399,12 @@ const EditChannel = (props) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
 
     if (name === 'type') {
-      // Reset key list mode when type changes, unless it's type 41
-      if (value === 41) {
-        setUseKeyListMode(false); // Type 41 uses a single textarea
-        setKeyList([]); // Clear keyList if switching to type 41
-      } else if (inputs.type === 41 && value !== 41) {
-         // If switching from type 41 to another type, check if the key contains commas/newlines
+      // Reset key list mode when type changes, unless it's type 41 or multi-key view is disabled
+      if (value === 41 || !supportsMultiKeyView(value) || disableMultiKeyView) {
+        setUseKeyListMode(false); // Type 41 uses a single textarea or multi-key view disabled
+        setKeyList([]); // Clear keyList if switching to single input mode
+      } else if (inputs.type === 41 && value !== 41 && supportsMultiKeyView(value) && !disableMultiKeyView) {
+         // If switching from type 41 to another type that supports multi-key, check if the key contains commas/newlines
          if (inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
             setUseKeyListMode(true);
             setShowKey(true);
@@ -409,8 +417,8 @@ const EditChannel = (props) => {
             setUseKeyListMode(false);
             setKeyList([]); // Clear keyList if switching from type 41 to single mode
          }
-      } else if (value !== 41 && inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
-           // If changing type between non-41 types, and key already contains multi-keys
+      } else if (value !== 41 && inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n')) && supportsMultiKeyView(value) && !disableMultiKeyView) {
+           // If changing type between non-41 types that support multi-key, and key already contains multi-keys
            setUseKeyListMode(true);
            setShowKey(true);
             const keys = inputs.key
@@ -528,7 +536,7 @@ const EditChannel = (props) => {
 
 
       // 处理密钥
-      if (data.key && data.type !== 41) {
+      if (data.key && supportsMultiKeyView(data.type)) {
          const keys = data.key.split(',').map(k => k.trim()).filter(k => k.length > 0);
          if (keys.length > 1) {
            setUseKeyListMode(true);
@@ -770,6 +778,7 @@ const EditChannel = (props) => {
         setKeyList([]); // Clear keyList state
         setUseKeyListMode(false); // Reset list mode
         setShowKey(false); // Reset showKey
+        setDisableMultiKeyView(false); // Reset disable multi-key view
       }
       props.refresh();
       props.handleClose();
@@ -891,6 +900,30 @@ const EditChannel = (props) => {
       // If no newline or comma, allow default paste
    };
 
+    // Toggle multi-key view disable state
+    const toggleDisableMultiKeyView = () => {
+        setDisableMultiKeyView(prev => !prev);
+        // When disabling multi-key view, force single input mode
+        if (!disableMultiKeyView) {
+            setUseKeyListMode(false);
+            // When switching to single mode, combine existing keys back into one string
+            const combinedKey = keyList.join(',');
+            setInputs(inputs => ({ ...inputs, key: combinedKey }));
+            setKeyList([]); // Clear key list state
+        } else {
+            // When enabling multi-key view (if applicable and key has multiple entries)
+            if (supportsMultiKeyView(inputs.type) && inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
+                 setUseKeyListMode(true);
+                 setShowKey(true);
+                 const keys = inputs.key
+                   .split(/[,\n]/)
+                   .map(k => k.trim())
+                   .filter(k => k.length > 0);
+                 setKeyList(keys);
+            }
+        }
+    };
+
 
   // 渲染密钥输入组件
   const renderKeyInput = () => {
@@ -912,10 +945,18 @@ const EditChannel = (props) => {
       );
     }
 
-    // 使用列表模式显示多个密钥
-    if (useKeyListMode) {
+    // 使用列表模式显示多个密钥 (if supported and not disabled)
+    if (useKeyListMode && supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
       return (
         <div>
+          <div style={{ marginTop: 8, marginBottom: '8px' }}>
+                <Checkbox
+                    checked={disableMultiKeyView}
+                    onChange={toggleDisableMultiKeyView}
+                >
+                    {t('禁用多密钥视图')}
+                </Checkbox>
+            </div>
           {keyList.map((key, index) => (
             <div key={index} style={{ display: 'flex', marginBottom: '8px' }} className="key-input-item">
               <Input
@@ -946,12 +987,24 @@ const EditChannel = (props) => {
            <Typography.Text type="secondary" style={{ marginLeft: 16 }}>
             {t('在输入框中输入逗号或回车可自动换行添加')}
            </Typography.Text>
+            
         </div>
       );
     }
 
-    // 默认单行密钥输入
+    // 默认单行密钥输入 (or if multi-key view is disabled or not supported)
     return (
+      <>
+      {supportsMultiKeyView(inputs.type) && ( // Only show checkbox if multi-key view is supported
+        <Checkbox
+          checked={disableMultiKeyView}
+          onChange={toggleDisableMultiKeyView}
+          style={{ marginRight: 8, marginBottom: 8, marginTop: 8 }} // Add some spacing
+        >
+           {t('禁用多密钥视图')}
+        </Checkbox>
+      )}
+
       <Input
          ref={singleKeyInputRef} // Attach ref here
         label={t('密钥')}
@@ -963,56 +1016,63 @@ const EditChannel = (props) => {
           handleInputChange('key', value);
         }}
         onPaste={(e) => {
-          // Handle paste for single input mode to switch to list mode
-          const clipboardData = e.clipboardData || window.clipboardData;
-          const pastedData = clipboardData.getData('Text');
+          // Handle paste for single input mode to switch to list mode, if supported and not disabled
+          if (supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
+              const clipboardData = e.clipboardData || window.clipboardData;
+              const pastedData = clipboardData.getData('Text');
 
-          // Check if pasted data contains newline or comma
-          if (pastedData.includes('\n') || pastedData.includes(',')) {
-            e.preventDefault(); // Prevent default paste
+              // Check if pasted data contains newline or comma
+              if (pastedData.includes('\n') || pastedData.includes(',')) {
+                e.preventDefault(); // Prevent default paste
 
-             // Prepend existing key if any
-             const combinedData = (inputs.key || '') + pastedData;
+                 // Prepend existing key if any
+                 const combinedData = (inputs.key || '') + pastedData;
 
-             // Process the pasted data to switch to list mode
-            const keys = combinedData
-              .split(/[,\n]/)
-              .map(k => k.trim())
-              .filter(k => k.length > 0);
+                 // Process the pasted data to switch to list mode
+                const keys = combinedData
+                  .split(/[,\n]/)
+                  .map(k => k.trim())
+                  .filter(k => k.length > 0);
 
-            if (keys.length > 0) {
-                setUseKeyListMode(true);
-                setShowKey(true);
-                setKeyList(keys);
-                 // Update the main inputs.key state based on the new list
-                handleInputChange('key', keys.join(','));
+                if (keys.length > 0) {
+                    setUseKeyListMode(true);
+                    setShowKey(true);
+                    setKeyList(keys);
+                     // Update the main inputs.key state based on the new list
+                    handleInputChange('key', keys.join(','));
 
-                 // Focus the first input after switching to list mode
-                 setTimeout(() => {
-                   const inputs = document.querySelectorAll('.key-input-item input');
-                   if (inputs.length > 0) {
-                     inputs[0].focus();
-                   }
-                }, 0);
+                     // Focus the first input after switching to list mode
+                     setTimeout(() => {
+                       const inputs = document.querySelectorAll('.key-input-item input');
+                       if (inputs.length > 0) {
+                         inputs[0].focus();
+                       }
+                    }, 0);
 
-            } else {
-                // If splitting resulted in no keys, just update the input value (which is empty after split)
-                 handleInputChange('key', '');
-            }
+                } else {
+                    // If splitting resulted in no valid keys, just update the input value (which is empty after split)
+                     handleInputChange('key', '');
+                }
+              }
+              // If no newline or comma, allow default paste (handled by onChange)
           }
-          // If no newline or comma, allow default paste (handled by onChange)
+           // If multi-key view not supported or disabled, allow default paste (handled by onChange)
         }}
         value={inputs.key || (isEdit ? initialKey : '')}
         autoComplete='new-password'
         addonAfter={
-          <Button
-            theme="borderless"
-            icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
-            onClick={() => setShowKey(!showKey)}
-            style={{ padding: '0 4px' }}
-          />
+          <Space>
+            
+            <Button
+              theme="borderless"
+              icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
+              onClick={() => setShowKey(!showKey)}
+              style={{ padding: '0 4px' }}
+            />
+          </Space>
         }
       />
+      </>
     );
   };
 
