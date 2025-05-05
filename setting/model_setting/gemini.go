@@ -6,25 +6,33 @@ import (
 
 // GeminiSettings 定义Gemini模型的配置
 type GeminiSettings struct {
-	SafetySettings         map[string]string `json:"safety_settings"`
-	VersionSettings        map[string]string `json:"version_settings"`
-	SupportedImagineModels []string          `json:"supported_imagine_models"`
+	SafetySettings                        map[string]string `json:"safety_settings"`
+	VersionSettings                       map[string]string `json:"version_settings"`
+	SupportedImagineModels                []string          `json:"supported_imagine_models"`
+	ThinkingAdapterEnabled                bool              `json:"thinking_adapter_enabled"`
+	ThinkingAdapterBudgetTokensPercentage float64           `json:"thinking_adapter_budget_tokens_percentage"`
 }
 
 // 默认配置
 var defaultGeminiSettings = GeminiSettings{
 	SafetySettings: map[string]string{
-		"default":                       "OFF",
-		"HARM_CATEGORY_CIVIC_INTEGRITY": "BLOCK_NONE",
+		"HARM_CATEGORY_HARASSMENT":         "BLOCK_NONE",
+		"HARM_CATEGORY_HATE_SPEECH":        "BLOCK_NONE",
+		"HARM_CATEGORY_SEXUALLY_EXPLICIT":  "BLOCK_NONE",
+		"HARM_CATEGORY_DANGEROUS_CONTENT":  "BLOCK_NONE",
 	},
 	VersionSettings: map[string]string{
-		"default":        "v1beta",
-		"gemini-1.0-pro": "v1",
+		"gemini-1.0-pro":  "v1beta",
+		"gemini-1.5-pro":  "v1beta",
+		"gemini-1.5-flash": "v1beta",
 	},
 	SupportedImagineModels: []string{
+		"imagen-1.0-playground",
 		"gemini-2.0-flash-exp-image-generation",
 		"gemini-2.0-flash-exp",
 	},
+	ThinkingAdapterEnabled:                false,
+	ThinkingAdapterBudgetTokensPercentage: 0.6,
 }
 
 // 全局实例
