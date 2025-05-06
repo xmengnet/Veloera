@@ -136,6 +136,9 @@ var defaultModelRatio = map[string]float64{
 	"gemini-2.0-flash":                    0.05,
 	"gemini-2.5-pro-exp-03-25":            0.625,
 	"gemini-2.5-pro-preview-03-25":        0.625,
+	"gemini-2.5-flash-preview-04-17":            0.075,
+	"gemini-2.5-flash-preview-04-17-thinking":   0.075,
+	"gemini-2.5-flash-preview-04-17-nothinking": 0.075,
 	"text-embedding-004":                  0.001,
 	"chatglm_turbo":                       0.3572,     // ￥0.005 / 1k tokens
 	"chatglm_pro":                         0.7143,     // ￥0.01 / 1k tokens
@@ -275,8 +278,6 @@ func InitModelSettings() {
 	cacheRatioMapMutex.Lock()
 	cacheRatioMap = defaultCacheRatio
 	cacheRatioMapMutex.Unlock()
-
-	common.SysLog("model settings initialized")
 }
 
 func GetModelPriceMap() map[string]float64 {
@@ -452,13 +453,19 @@ func getHardcodedCompletionModelRatio(name string) (float64, bool) {
 	if strings.HasPrefix(name, "mistral-") {
 		return 3, true
 	}
-	if strings.HasPrefix(name, "gemini-") {
-		if strings.HasPrefix(name, "gemini-1.5") {
+	if strings.HasPrefix(name, "gemini") {
+		if strings.HasPrefix(name, "gemini-1.0-pro") {
 			return 4, true
-		} else if strings.HasPrefix(name, "gemini-2.0") {
+		} else if strings.HasPrefix(name, "gemini-1.5-pro") {
 			return 4, true
 		} else if strings.HasPrefix(name, "gemini-2.5-pro-preview") {
 			return 8, true
+		} else if strings.HasPrefix(name, "gemini-2.5-flash-preview") {
+			if strings.HasSuffix(name, "-nothinking") {
+				return 4, false
+			} else {
+				return 3.5 / 0.6, false
+			}
 		}
 		return 4, false
 	}

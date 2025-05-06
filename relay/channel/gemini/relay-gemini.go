@@ -23,12 +23,14 @@ func CovertGemini2OpenAI(textRequest dto.GeneralOpenAIRequest, info *relaycommon
 
 	geminiRequest := GeminiChatRequest{
 		Contents: make([]GeminiChatContent, 0, len(textRequest.Messages)),
-		//SafetySettings: []GeminiChatSafetySettings{},
 		GenerationConfig: GeminiChatGenerationConfig{
 			Temperature:     textRequest.Temperature,
 			TopP:            textRequest.TopP,
 			MaxOutputTokens: textRequest.MaxTokens,
 			Seed:            int64(textRequest.Seed),
+			ThinkingConfig: &GeminiThinkingConfig{
+				IncludeThoughts: true,
+			},
 		},
 	}
 
@@ -36,6 +38,18 @@ func CovertGemini2OpenAI(textRequest dto.GeneralOpenAIRequest, info *relaycommon
 		geminiRequest.GenerationConfig.ResponseModalities = []string{
 			"TEXT",
 			"IMAGE",
+		}
+	}
+
+	if model_setting.GetGeminiSettings().ThinkingAdapterEnabled {
+		if strings.HasSuffix(info.OriginModelName, "-thinking") {
+			budgetTokens := model_setting.GetGeminiSettings().ThinkingAdapterBudgetTokensPercentage * float64(geminiRequest.GenerationConfig.MaxOutputTokens)
+			if budgetTokens == 0 || budgetTokens > 24576 {
+				budgetTokens = 24576
+			}
+			geminiRequest.GenerationConfig.ThinkingConfig.SetThinkingBudget(int(budgetTokens))
+		} else if strings.HasSuffix(info.OriginModelName, "-nothinking") {
+			geminiRequest.GenerationConfig.ThinkingConfig.SetThinkingBudget(0)
 		}
 	}
 
@@ -644,6 +658,7 @@ func GeminiChatStreamHandler(c *gin.Context, resp *http.Response, info *relaycom
 		if geminiResponse.UsageMetadata.TotalTokenCount != 0 {
 			usage.PromptTokens = geminiResponse.UsageMetadata.PromptTokenCount
 			usage.CompletionTokens = geminiResponse.UsageMetadata.CandidatesTokenCount
+			usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
 		}
 		err = helper.ObjectData(c, response)
 		if err != nil {
@@ -666,7 +681,7 @@ func GeminiChatStreamHandler(c *gin.Context, resp *http.Response, info *relaycom
 
 	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
 	usage.PromptTokensDetails.TextTokens = usage.PromptTokens
-	usage.CompletionTokenDetails.TextTokens = usage.CompletionTokens
+	//usage.CompletionTokenDetails.TextTokens = usage.CompletionTokens
 
 	if info.ShouldIncludeUsage {
 		response = helper.GenerateFinalUsageResponse(id, createAt, info.UpstreamModelName, *usage)
@@ -707,12 +722,13 @@ func GeminiChatHandler(c *gin.Context, resp *http.Response, info *relaycommon.Re
 	}
 	fullTextResponse := responseGeminiChat2OpenAI(&geminiResponse)
 	fullTextResponse.Model = info.UpstreamModelName
-	usage := dto.Usage{
+	usage := &dto.Usage{
 		PromptTokens:     geminiResponse.UsageMetadata.PromptTokenCount,
 		CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount,
 		TotalTokens:      geminiResponse.UsageMetadata.TotalTokenCount,
 	}
-	fullTextResponse.Usage = usage
+	usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
+	fullTextResponse.Usage = *usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
 		return service.OpenAIErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
@@ -720,7 +736,7 @@ func GeminiChatHandler(c *gin.Context, resp *http.Response, info *relaycommon.Re
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, err = c.Writer.Write(jsonResponse)
-	return nil, &usage
+	return nil, usage
 }
 
 func GeminiEmbeddingHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (usage any, err *dto.OpenAIErrorWithStatusCode) {

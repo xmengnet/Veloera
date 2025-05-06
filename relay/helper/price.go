@@ -25,7 +25,7 @@ func (p PriceData) ToSetting() string {
 	return fmt.Sprintf("ModelPrice: %f, ModelRatio: %f, CompletionRatio: %f, CacheRatio: %f, GroupRatio: %f, UsePrice: %t, CacheCreationRatio: %f, ShouldPreConsumedQuota: %d", p.ModelPrice, p.ModelRatio, p.CompletionRatio, p.CacheRatio, p.GroupRatio, p.UsePrice, p.CacheCreationRatio, p.ShouldPreConsumedQuota)
 }
 
-func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens int, maxTokens int) (PriceData, error) {
+func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens int, completionTokens int) (PriceData, error) {
 	// Extract the base model name if it has a prefix
 	modelName := info.OriginModelName
 	modelNameForPrice := modelName
@@ -46,8 +46,8 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	var cacheCreationRatio float64
 	if !usePrice {
 		preConsumedTokens := common.PreConsumedQuota
-		if maxTokens != 0 {
-			preConsumedTokens = promptTokens + maxTokens
+		if completionTokens != 0 {
+			preConsumedTokens = promptTokens + completionTokens
 		}
 		var success bool
 		modelRatio, success = operation_setting.GetModelRatio(modelNameForRatio)
@@ -60,11 +60,7 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 				}
 			}
 			if !acceptUnsetRatio {
-				if info.UserId == 1 {
-					return PriceData{}, fmt.Errorf("模型 %s 倍率或价格未配置，请设置或开始自用模式；Model %s ratio or price not set, please set or start self-use mode", modelName, modelName)
-				} else {
-					return PriceData{}, fmt.Errorf("模型 %s 倍率或价格未配置, 请联系管理员设置；Model %s ratio or price not set, please contact administrator to set", modelName, modelName)
-				}
+				return PriceData{}, fmt.Errorf("模型 %s 倍率或价格未配置，请联系管理员设置或开始自用模式；Model %s ratio or price not set, please set or start self-use mode", info.OriginModelName, info.OriginModelName)
 			}
 		}
 		completionRatio = operation_setting.GetCompletionRatio(modelNameForRatio)
@@ -92,4 +88,16 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 	}
 
 	return priceData, nil
+}
+
+func ContainPriceOrRatio(modelName string) bool {
+	_, ok := operation_setting.GetModelPrice(modelName, false)
+	if ok {
+		return true
+	}
+	_, ok = operation_setting.GetModelRatio(modelName)
+	if ok {
+		return true
+	}
+	return false
 }
