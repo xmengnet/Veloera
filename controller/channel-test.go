@@ -10,6 +10,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 	"veloera/common"
 	"veloera/dto"
 	"veloera/middleware"
@@ -19,10 +23,6 @@ import (
 	"veloera/relay/constant"
 	"veloera/relay/helper"
 	"veloera/service"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/bytedance/gopkg/util/gopool"
 

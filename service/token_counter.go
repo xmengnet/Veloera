@@ -7,13 +7,13 @@ import (
 	"image"
 	"log"
 	"math"
+	"strings"
+	"unicode/utf8"
 	"veloera/common"
 	"veloera/constant"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
 	"veloera/setting/operation_setting"
-	"strings"
-	"unicode/utf8"
 
 	"github.com/pkoukk/tiktoken-go"
 )

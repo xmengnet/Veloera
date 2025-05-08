@@ -6,8 +6,8 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
-	"veloera/common"
 	"strings"
+	"veloera/common"
 )
 
 func GetFullRequestURL(baseURL string, requestURL string, channelType int) string {

@@ -1,8 +1,8 @@
 package service
 
 import (
-	"veloera/constant"
 	"strings"
+	"veloera/constant"
 )
 
 func CoverTaskActionToModelName(platform constant.TaskPlatform, action string) string {

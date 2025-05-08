@@ -1,10 +1,10 @@
 package model
 
 import (
-	"veloera/common"
-	"veloera/setting/operation_setting"
 	"sync"
 	"time"
+	"veloera/common"
+	"veloera/setting/operation_setting"
 )
 
 type Pricing struct {

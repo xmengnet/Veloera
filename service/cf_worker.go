@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/setting"
-	"strings"
 )
 
 // WorkerRequest Worker请求的数据结构

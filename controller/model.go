@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/constant"
 	"veloera/dto"
@@ -16,7 +17,6 @@ import (
 	"veloera/relay/channel/moonshot"
 	relaycommon "veloera/relay/common"
 	relayconstant "veloera/relay/constant"
-	"strings"
 )
 
 // https://platform.openai.com/docs/api-reference/models/list

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"veloera/common"
 	"time"
+	"veloera/common"
 )
 
 var timeFormat = "2006-01-02T15:04:05.000Z"

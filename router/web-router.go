@@ -6,10 +6,10 @@ import (
 	"github.com/gin-contrib/static"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/controller"
 	"veloera/middleware"
-	"strings"
 )
 
 func SetWebRouter(router *gin.Engine, buildFS embed.FS, indexPage []byte) {

@@ -3,9 +3,9 @@ package model
 import (
 	"fmt"
 	"gorm.io/gorm"
-	"veloera/common"
 	"sync"
 	"time"
+	"veloera/common"
 )
 
 // QuotaData 柱状图数据

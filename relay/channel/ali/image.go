@@ -7,12 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 	"veloera/common"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
 	"veloera/service"
-	"strings"
-	"time"
 )
 
 func oaiImage2Ali(request dto.ImageRequest) *AliImageRequest {

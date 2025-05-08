@@ -2,8 +2,8 @@ package operation_setting
 
 import (
 	"encoding/json"
-	"veloera/common"
 	"sync"
+	"veloera/common"
 )
 
 var defaultCacheRatio = map[string]float64{

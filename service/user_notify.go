@@ -2,11 +2,11 @@ package service
 
 import (
 	"fmt"
+	"strings"
 	"veloera/common"
 	"veloera/constant"
 	"veloera/dto"
 	"veloera/model"
-	"strings"
 )
 
 func NotifyRootUser(t string, subject string, content string) {

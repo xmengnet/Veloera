@@ -3,11 +3,11 @@ package service
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/dto"
 	"veloera/model"
 	"veloera/setting/operation_setting"
-	"strings"
 )
 
 func formatNotifyType(channelId int, status int) string {

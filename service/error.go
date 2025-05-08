@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"veloera/common"
-	"veloera/dto"
 	"strconv"
 	"strings"
+	"veloera/common"
+	"veloera/dto"
 )
 
 func MidjourneyErrorWrapper(code int, desc string) *dto.MidjourneyResponse {

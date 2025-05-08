@@ -7,8 +7,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"veloera/common"
 	"time"
+	"veloera/common"
 )
 
 var httpClient *http.Client

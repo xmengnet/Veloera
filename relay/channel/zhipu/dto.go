@@ -1,8 +1,8 @@
 package zhipu
 
 import (
-	"veloera/dto"
 	"time"
+	"veloera/dto"
 )
 
 type ZhipuMessage struct {

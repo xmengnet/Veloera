@@ -8,9 +8,9 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	
+
 	"github.com/gin-gonic/gin"
-	
+
 	"veloera/common"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
@@ -49,47 +49,47 @@ func getInputTokens(req *dto.OpenAIResponsesRequest, info *relaycommon.RelayInfo
 
 func ResponsesHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	relayInfo := relaycommon.GenRelayInfo(c)
-	
+
 	// Validate request and check sensitive content
 	req, openaiErr := validateAndPrepareRequest(c, relayInfo)
 	if openaiErr != nil {
 		return openaiErr
 	}
-	
+
 	// Handle model mapping and token counting
 	openaiErr = handleModelAndTokens(c, relayInfo, req)
 	if openaiErr != nil {
 		return openaiErr
 	}
-	
+
 	// Calculate price and pre-consume quota
 	priceData, preConsumedQuota, userQuota, openaiErr := handleQuotaAndPricing(c, relayInfo, req)
 	if openaiErr != nil {
 		return openaiErr
 	}
-	
+
 	// Return quota if there's an error
 	defer func() {
 		if openaiErr != nil {
 			returnPreConsumedQuota(c, relayInfo, userQuota, preConsumedQuota)
 		}
 	}()
-	
+
 	// Prepare and send request
 	httpResp, openaiErr := prepareAndSendRequest(c, relayInfo, req)
 	if openaiErr != nil {
 		return openaiErr
 	}
-	
+
 	// Process response and handle quota consumption
 	usage, openaiErr := processResponse(c, httpResp, relayInfo)
 	if openaiErr != nil {
 		return openaiErr
 	}
-	
+
 	// Post-consume quota
 	postProcessQuota(c, relayInfo, usage, preConsumedQuota, userQuota, priceData)
-	
+
 	return nil
 }
 
@@ -99,7 +99,7 @@ func validateAndPrepareRequest(c *gin.Context, relayInfo *relaycommon.RelayInfo)
 		common.LogError(c, fmt.Sprintf("getAndValidateResponsesRequest error: %s", err.Error()))
 		return nil, service.OpenAIErrorWrapperLocal(err, "invalid_responses_request", http.StatusBadRequest)
 	}
-	
+
 	if setting.ShouldCheckPromptSensitive() {
 		sensitiveWords, err := checkInputSensitive(req, relayInfo)
 		if err != nil {
@@ -107,7 +107,7 @@ func validateAndPrepareRequest(c *gin.Context, relayInfo *relaycommon.RelayInfo)
 			return nil, service.OpenAIErrorWrapperLocal(err, "check_request_sensitive_error", http.StatusBadRequest)
 		}
 	}
-	
+
 	return req, nil
 }
 
@@ -116,9 +116,9 @@ func handleModelAndTokens(c *gin.Context, relayInfo *relaycommon.RelayInfo, req 
 	if err != nil {
 		return service.OpenAIErrorWrapperLocal(err, "model_mapped_error", http.StatusBadRequest)
 	}
-	
+
 	req.Model = relayInfo.UpstreamModelName
-	
+
 	if value, exists := c.Get("prompt_tokens"); exists {
 		promptTokens := value.(int)
 		relayInfo.SetPromptTokens(promptTokens)
@@ -129,7 +129,7 @@ func handleModelAndTokens(c *gin.Context, relayInfo *relaycommon.RelayInfo, req 
 		}
 		c.Set("prompt_tokens", promptTokens)
 	}
-	
+
 	return nil
 }
 
@@ -138,13 +138,13 @@ func handleQuotaAndPricing(c *gin.Context, relayInfo *relaycommon.RelayInfo, req
 	if err != nil {
 		return helper.PriceData{}, 0, 0, service.OpenAIErrorWrapperLocal(err, "model_price_error", http.StatusInternalServerError)
 	}
-	
+
 	// pre consume quota
 	preConsumedQuota, userQuota, openaiErr := preConsumeQuota(c, priceData.ShouldPreConsumedQuota, relayInfo)
 	if openaiErr != nil {
 		return helper.PriceData{}, 0, 0, openaiErr
 	}
-	
+
 	return priceData, preConsumedQuota, userQuota, nil
 }
 
@@ -153,30 +153,30 @@ func prepareAndSendRequest(c *gin.Context, relayInfo *relaycommon.RelayInfo, req
 	if adaptor == nil {
 		return nil, service.OpenAIErrorWrapperLocal(fmt.Errorf("invalid api type: %d", relayInfo.ApiType), "invalid_api_type", http.StatusBadRequest)
 	}
-	
+
 	adaptor.Init(relayInfo)
 	requestBody, openaiErr := prepareRequestBody(c, relayInfo, req, adaptor)
 	if openaiErr != nil {
 		return nil, openaiErr
 	}
-	
+
 	resp, err := adaptor.DoRequest(c, relayInfo, requestBody)
 	if err != nil {
 		return nil, service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
-	
+
 	var httpResp *http.Response
 	if resp != nil {
 		httpResp = resp.(*http.Response)
 		statusCodeMappingStr := c.GetString("status_code_mapping")
-		
+
 		if httpResp.StatusCode != http.StatusOK {
 			openaiErr := service.RelayErrorHandler(httpResp, false)
 			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 			return nil, openaiErr
 		}
 	}
-	
+
 	return httpResp, nil
 }
 
@@ -188,17 +188,19 @@ func prepareRequestBody(c *gin.Context, relayInfo *relaycommon.RelayInfo, req *d
 		}
 		return bytes.NewBuffer(body), nil
 	}
-	
-	convertedRequest, err := adaptor.(interface{ ConvertOpenAIResponsesRequest(*gin.Context, *relaycommon.RelayInfo, dto.OpenAIResponsesRequest) (interface{}, error) }).ConvertOpenAIResponsesRequest(c, relayInfo, *req)
+
+	convertedRequest, err := adaptor.(interface {
+		ConvertOpenAIResponsesRequest(*gin.Context, *relaycommon.RelayInfo, dto.OpenAIResponsesRequest) (interface{}, error)
+	}).ConvertOpenAIResponsesRequest(c, relayInfo, *req)
 	if err != nil {
 		return nil, service.OpenAIErrorWrapperLocal(err, "convert_request_error", http.StatusBadRequest)
 	}
-	
+
 	jsonData, err := json.Marshal(convertedRequest)
 	if err != nil {
 		return nil, service.OpenAIErrorWrapperLocal(err, "marshal_request_error", http.StatusInternalServerError)
 	}
-	
+
 	// Apply param override
 	if len(relayInfo.ParamOverride) > 0 {
 		jsonData, err = applyParamOverride(jsonData, relayInfo.ParamOverride)
@@ -206,11 +208,11 @@ func prepareRequestBody(c *gin.Context, relayInfo *relaycommon.RelayInfo, req *d
 			return nil, service.OpenAIErrorWrapperLocal(err, "param_override_failed", http.StatusInternalServerError)
 		}
 	}
-	
+
 	if common.DebugEnabled {
 		println("requestBody: ", string(jsonData))
 	}
-	
+
 	return bytes.NewBuffer(jsonData), nil
 }
 
@@ -220,24 +222,24 @@ func applyParamOverride(jsonData []byte, paramOverride map[string]interface{}) (
 	if err != nil {
 		return nil, fmt.Errorf("param_override_unmarshal_failed: %w", err)
 	}
-	
+
 	for key, value := range paramOverride {
 		reqMap[key] = value
 	}
-	
+
 	return json.Marshal(reqMap)
 }
 
 func processResponse(c *gin.Context, httpResp *http.Response, relayInfo *relaycommon.RelayInfo) (*dto.Usage, *dto.OpenAIErrorWithStatusCode) {
 	adaptor := GetAdaptor(relayInfo.ApiType)
 	usage, openaiErr := adaptor.DoResponse(c, httpResp, relayInfo)
-	
+
 	if openaiErr != nil {
 		statusCodeMappingStr := c.GetString("status_code_mapping")
 		service.ResetStatusCode(openaiErr, statusCodeMappingStr)
 		return nil, openaiErr
 	}
-	
+
 	return usage.(*dto.Usage), nil
 }
 

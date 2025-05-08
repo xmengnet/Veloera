@@ -3,11 +3,11 @@ package service
 import (
 	"fmt"
 	"github.com/bytedance/gopkg/util/gopool"
-	"veloera/common"
-	"veloera/constant"
 	"strconv"
 	"sync"
 	"time"
+	"veloera/common"
+	"veloera/constant"
 )
 
 // notifyLimitStore is used for in-memory rate limiting when Redis is disabled

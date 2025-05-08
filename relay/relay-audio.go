@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
@@ -12,7 +13,6 @@ import (
 	"veloera/relay/helper"
 	"veloera/service"
 	"veloera/setting"
-	"strings"
 )
 
 func getAndValidAudioRequest(c *gin.Context, info *relaycommon.RelayInfo) (*dto.AudioRequest, error) {

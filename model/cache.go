@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"veloera/common"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+	"veloera/common"
 )
 
 var group2model2channels map[string]map[string][]*Channel

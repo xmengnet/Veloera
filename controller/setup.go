@@ -2,11 +2,11 @@ package controller
 
 import (
 	"github.com/gin-gonic/gin"
+	"time"
 	"veloera/common"
 	"veloera/constant"
 	"veloera/model"
 	"veloera/setting/operation_setting"
-	"time"
 )
 
 type Setup struct {

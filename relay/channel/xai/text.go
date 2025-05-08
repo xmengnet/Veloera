@@ -6,13 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/dto"
 	"veloera/relay/channel/openai"
 	relaycommon "veloera/relay/common"
 	"veloera/relay/helper"
 	"veloera/service"
-	"strings"
 )
 
 func streamResponseXAI2OpenAI(xAIResp *dto.ChatCompletionsStreamResponse, usage *dto.Usage) *dto.ChatCompletionsStreamResponse {

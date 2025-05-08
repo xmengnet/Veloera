@@ -3,10 +3,10 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"veloera/common"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
-	"strings"
 )
 
 func ClaudeToOpenAIRequest(claudeRequest dto.ClaudeRequest, info *relaycommon.RelayInfo) (*dto.GeneralOpenAIRequest, error) {

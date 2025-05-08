@@ -7,10 +7,10 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"veloera/common"
-	"veloera/model"
 	"strconv"
 	"time"
+	"veloera/common"
+	"veloera/model"
 )
 
 type wechatLoginResponse struct {

@@ -1,8 +1,8 @@
 package baidu
 
 import (
-	"veloera/dto"
 	"time"
+	"veloera/dto"
 )
 
 type BaiduMessage struct {

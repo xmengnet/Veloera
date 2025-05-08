@@ -3,11 +3,11 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/model"
 	"veloera/setting"
 	"veloera/setting/system_setting"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )

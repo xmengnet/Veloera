@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/dto"
 	"veloera/model"
@@ -15,7 +16,6 @@ import (
 	"veloera/relay/helper"
 	"veloera/service"
 	"veloera/setting"
-	"strings"
 )
 
 func getAndValidImageRequest(c *gin.Context, info *relaycommon.RelayInfo) (*dto.ImageRequest, error) {

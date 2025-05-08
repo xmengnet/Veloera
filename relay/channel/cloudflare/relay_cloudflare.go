@@ -6,13 +6,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 	"veloera/common"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
 	"veloera/relay/helper"
 	"veloera/service"
-	"strings"
-	"time"
 )
 
 func convertCf2CompletionsRequest(textRequest dto.GeneralOpenAIRequest) *CfRequest {

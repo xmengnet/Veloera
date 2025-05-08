@@ -8,13 +8,13 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
 	"veloera/relay/helper"
 	"veloera/service"
 	"veloera/setting/model_setting"
-	"strings"
 )
 
 func getAndValidateClaudeRequest(c *gin.Context) (textRequest *dto.ClaudeRequest, err error) {

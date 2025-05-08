@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"strings"
 	"veloera/common"
 	constant2 "veloera/constant"
 	"veloera/dto"
@@ -22,7 +23,6 @@ import (
 	"veloera/relay/common_handler"
 	"veloera/relay/constant"
 	"veloera/service"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )

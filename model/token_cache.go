@@ -2,9 +2,9 @@ package model
 
 import (
 	"fmt"
+	"time"
 	"veloera/common"
 	"veloera/constant"
-	"time"
 )
 
 func cacheSetToken(token Token) error {

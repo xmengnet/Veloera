@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"veloera/common"
 	"os"
 	"strings"
+	"veloera/common"
 )
 
 func SetRouter(router *gin.Engine, buildFS embed.FS, indexPage []byte) {

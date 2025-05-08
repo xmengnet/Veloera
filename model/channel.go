@@ -2,9 +2,9 @@ package model
 
 import (
 	"encoding/json"
-	"veloera/common"
 	"strings"
 	"sync"
+	"veloera/common"
 
 	"gorm.io/gorm"
 )

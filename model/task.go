@@ -3,9 +3,9 @@ package model
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"time"
 	"veloera/constant"
 	commonRelay "veloera/relay/common"
-	"time"
 )
 
 type TaskStatus string

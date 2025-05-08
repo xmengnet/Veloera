@@ -3,8 +3,8 @@ package model
 import (
 	"errors"
 	"fmt"
-	"veloera/common"
 	"strings"
+	"veloera/common"
 
 	"github.com/samber/lo"
 	"gorm.io/gorm"

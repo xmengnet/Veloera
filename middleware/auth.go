@@ -4,10 +4,10 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"veloera/common"
-	"veloera/model"
 	"strconv"
 	"strings"
+	"veloera/common"
+	"veloera/model"
 )
 
 func validUserInfo(username string, role int) bool {

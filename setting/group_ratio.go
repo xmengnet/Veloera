@@ -3,8 +3,8 @@ package setting
 import (
 	"encoding/json"
 	"errors"
-	"veloera/common"
 	"sync"
+	"veloera/common"
 )
 
 var groupRatio = map[string]float64{

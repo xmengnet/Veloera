@@ -3,8 +3,8 @@ package controller
 import (
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"veloera/model"
 	"strconv"
+	"veloera/model"
 )
 
 func GetAllQuotaDates(c *gin.Context) {

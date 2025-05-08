@@ -2,9 +2,9 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 	"veloera/common"
 	"veloera/model"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )

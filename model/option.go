@@ -1,13 +1,13 @@
 package model
 
 import (
+	"strconv"
+	"strings"
+	"time"
 	"veloera/common"
 	"veloera/setting"
 	"veloera/setting/config"
 	"veloera/setting/operation_setting"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type Option struct {

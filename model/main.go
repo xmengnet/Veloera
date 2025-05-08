@@ -2,12 +2,12 @@ package model
 
 import (
 	"log"
-	"veloera/common"
-	"veloera/constant"
 	"os"
 	"strings"
 	"sync"
 	"time"
+	"veloera/common"
+	"veloera/constant"
 
 	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"

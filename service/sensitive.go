@@ -3,10 +3,10 @@ package service
 import (
 	"errors"
 	"fmt"
-	"veloera/dto"
-	"veloera/setting"
 	"regexp"
 	"strings"
+	"veloera/dto"
+	"veloera/setting"
 )
 
 func CheckSensitiveMessages(messages []dto.Message) ([]string, error) {

@@ -2,11 +2,11 @@ package zhipu_4v
 
 import (
 	"github.com/golang-jwt/jwt"
-	"veloera/common"
-	"veloera/dto"
 	"strings"
 	"sync"
 	"time"
+	"veloera/common"
+	"veloera/dto"
 )
 
 // https://open.bigmodel.cn/doc/api#chatglm_std

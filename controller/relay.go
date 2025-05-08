@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"veloera/common"
 	"veloera/dto"
 	"veloera/middleware"
@@ -18,7 +19,6 @@ import (
 	relayconstant "veloera/relay/constant"
 	"veloera/relay/helper"
 	"veloera/service"
-	"strings"
 )
 
 func relayHandler(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode {

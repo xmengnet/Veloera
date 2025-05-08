@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"veloera/common"
 	"runtime/debug"
+	"veloera/common"
 )
 
 func RelayPanicRecover() gin.HandlerFunc {

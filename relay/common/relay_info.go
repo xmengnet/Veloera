@@ -1,12 +1,12 @@
 package common
 
 import (
+	"strings"
+	"time"
 	"veloera/common"
 	"veloera/constant"
 	"veloera/dto"
 	relayconstant "veloera/relay/constant"
-	"strings"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
