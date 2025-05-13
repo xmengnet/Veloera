@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -237,61 +238,46 @@ func InitLogDB() (err error) {
 }
 
 func migrateDB() error {
-	// 按顺序迁移所有模型
-	err := DB.AutoMigrate(&Channel{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Token{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&User{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Option{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Redemption{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&RedemptionLog{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Ability{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Log{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Midjourney{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&TopUp{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&QuotaData{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Task{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Setup{})
-	if err != nil {
-		return err
+	common.SysLog("开始迁移数据库...")
+	// 定义需要迁移的所有数据库模型
+	models := []interface{}{
+		&Channel{},
+		&Token{},
+		&User{},
+		&Option{},
+		&Redemption{},
+		&RedemptionLog{},
+		&Ability{},
+		&Log{},
+		&Midjourney{},
+		&TopUp{},
+		&QuotaData{},
+		&Task{},
+		&Setup{},
 	}
 
-	common.SysLog("database migrated")
+	skippedTables := 0
+	migratedTables := 0
+
+	for _, model := range models {
+		modelName := fmt.Sprintf("%T", model)
+		modelName = strings.TrimPrefix(modelName, "*model.")
+
+		err := DB.AutoMigrate(model)
+		if err != nil {
+			// 如果是表已存在的错误，我们记录并继续
+			if strings.Contains(err.Error(), "already exists") {
+				common.SysLog("表 " + modelName + " 已存在，跳过迁移")
+				skippedTables++
+				continue
+			}
+			// 其他错误则返回
+			return fmt.Errorf("迁移表 %s 失败: %v", modelName, err)
+		}
+		migratedTables++
+	}
+
+	common.SysLog(fmt.Sprintf("数据库迁移完成，成功迁移 %d 个表，跳过 %d 个已存在的表", migratedTables, skippedTables))
 	return nil
 }
 
