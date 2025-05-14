@@ -3,6 +3,7 @@ package model
 import (
 	"log"
 	"os"
+	"reflect" // Import the reflect package
 	"strings"
 	"sync"
 	"time"
@@ -260,7 +261,7 @@ func migrateDB() error {
 		if err != nil {
 			// 检查是否是"表已存在"错误 (仅限 PostgreSQL)
 			if common.UsingPostgreSQL && strings.Contains(err.Error(), "already exists") {
-				common.SysLog("表 " + common.Get  ModelName(model) + " 已存在，跳过创建")
+				common.SysLog("表 " + reflect.TypeOf(model).Elem().Name() + " 已存在，跳过创建")
 			} else {
 				return err
 			}
