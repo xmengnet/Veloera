@@ -40,6 +40,7 @@ const (
 	LogTypeConsume
 	LogTypeManage
 	LogTypeSystem
+	LogTypeCheckIn // 添加签到日志类型
 )
 
 func formatUserLogs(logs []*Log) {

@@ -103,6 +103,12 @@ const LogsTable = () => {
             {t('系统')}
           </Tag>
         );
+      case 5: // 添加签到日志类型
+        return (
+          <Tag color='green' size='large'> {/* 你可以选择一个合适的颜色 */}
+            {t('签到')} {/* 前端显示的文字 */}
+          </Tag>
+        );
       default:
         return (
           <Tag color='black' size='large'>
@@ -1459,6 +1465,7 @@ const LogsTable = () => {
             <Select.Option value='2'>{t('消费')}</Select.Option>
             <Select.Option value='3'>{t('管理')}</Select.Option>
             <Select.Option value='4'>{t('系统')}</Select.Option>
+            <Select.Option value='5'>{t('签到')}</Select.Option> {/* 添加签到选项 */}
           </Select>
           <Button
             theme='light'
