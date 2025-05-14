@@ -7,6 +7,7 @@ import (
 	"veloera/model"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func GetAllRedemptions(c *gin.Context) {
@@ -105,6 +106,7 @@ func AddRedemption(c *gin.Context) {
 		})
 		return
 	}
+
 	if len(redemption.Name) == 0 || len(redemption.Name) > 20 {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -112,28 +114,30 @@ func AddRedemption(c *gin.Context) {
 		})
 		return
 	}
-	if redemption.Count <= 0 {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "兑换码个数必须大于0",
-		})
-		return
-	}
-	if redemption.Count > 100 {
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "一次兑换码批量生成的个数不能大于 100",
-		})
-		return
-	}
 
 	var keys []string
-	for i := 0; i < redemption.Count; i++ {
-		key := common.GetUUID()
+	if redemption.Key != "" {
+		// If key is provided, use it and check for duplicates
+		_, err := model.GetRedemptionByKey(redemption.Key)
+		if err != nil && err != gorm.ErrRecordNotFound {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		if err == nil { // If err is nil, a record was found
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "兑换码内容已存在",
+			})
+			return
+		}
+
 		cleanRedemption := model.Redemption{
 			UserId:      c.GetInt("id"),
 			Name:        redemption.Name,
-			Key:         key,
+			Key:         redemption.Key,
 			CreatedTime: common.GetTimestamp(),
 			Quota:       redemption.Quota,
 			IsGift:      redemption.IsGift,
@@ -144,12 +148,52 @@ func AddRedemption(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": err.Error(),
-				"data":    keys,
 			})
 			return
 		}
-		keys = append(keys, key)
+		keys = append(keys, redemption.Key)
+
+	} else {
+		// If key is not provided, generate multiple random keys
+		if redemption.Count <= 0 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "兑换码个数必须大于0",
+			})
+			return
+		}
+		if redemption.Count > 100 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "一次兑换码批量生成的个数不能大于 100",
+			})
+			return
+		}
+
+		for i := 0; i < redemption.Count; i++ {
+			key := common.GetUUID()
+			cleanRedemption := model.Redemption{
+				UserId:      c.GetInt("id"),
+				Name:        redemption.Name,
+				Key:         key,
+				CreatedTime: common.GetTimestamp(),
+				Quota:       redemption.Quota,
+				IsGift:      redemption.IsGift,
+				MaxUses:     redemption.MaxUses,
+			}
+			err = cleanRedemption.Insert()
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": err.Error(),
+					"data":    keys,
+				})
+				return
+			}
+			keys = append(keys, key)
+		}
 	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

@@ -120,6 +120,17 @@ func GetRedemptionById(id int) (*Redemption, error) {
 	return &redemption, err
 }
 
+// GetRedemptionByKey 根据兑换码内容获取兑换码
+func GetRedemptionByKey(key string) (*Redemption, error) {
+	if key == "" {
+		return nil, errors.New("兑换码内容为空！")
+	}
+	redemption := Redemption{}
+	var err error = nil
+	err = DB.First(&redemption, "`key` = ?", key).Error
+	return &redemption, err
+}
+
 func Redeem(key string, userId int) (quota int, isGift bool, err error) {
 	if key == "" {
 		return 0, false, errors.New("未提供兑换码")

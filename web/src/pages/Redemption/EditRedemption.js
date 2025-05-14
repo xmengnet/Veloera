@@ -42,6 +42,7 @@ const EditRedemption = (props) => {
     max_uses: -1  // -1 means unlimited
   };
   const [inputs, setInputs] = useState(originInputs);
+  const [redemptionKey, setRedemptionKey] = useState(''); // New state for optional key
   const { name, quota, count, is_gift, max_uses } = inputs;
 
   const handleCancel = () => {
@@ -94,6 +95,8 @@ const EditRedemption = (props) => {
     } else {
       res = await API.post(`/api/redemption/`, {
         ...localInputs,
+        // Add the optional key if provided
+        key: redemptionKey.trim() === '' ? undefined : redemptionKey.trim(),
       });
     }
     const { success, message, data } = res.data;
@@ -216,6 +219,22 @@ const EditRedemption = (props) => {
               />
             </>
           )}
+
+          {!isEdit && (
+            <>
+              <Divider />
+              <Input
+                style={{ marginTop: 8 }}
+                label={t('兑换码内容 (可选)')}
+                name='key'
+                placeholder={t('留空则自动生成')}
+                onChange={(value) => setRedemptionKey(value)}
+                value={redemptionKey}
+                autoComplete='new-password'
+              />
+            </>
+          )}
+
           <Divider />
           <Typography.Text>{t('兑换码类型')}</Typography.Text>
           <div style={{ marginTop: 8 }}>
@@ -227,7 +246,7 @@ const EditRedemption = (props) => {
               />
             </Space>
           </div>
-          
+
           {inputs.is_gift && (
             <>
               <Divider />
