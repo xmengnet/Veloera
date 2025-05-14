@@ -238,57 +238,33 @@ func InitLogDB() (err error) {
 
 func migrateDB() error {
 	// 按顺序迁移所有模型
-	err := DB.AutoMigrate(&Channel{})
-	if err != nil {
-		return err
+	// 按顺序迁移所有模型
+	modelsToMigrate := []interface{}{
+		&Channel{},
+		&Token{},
+		&User{},
+		&Option{},
+		&Redemption{},
+		&RedemptionLog{},
+		&Ability{},
+		&Log{},
+		&Midjourney{},
+		&TopUp{},
+		&QuotaData{},
+		&Task{},
+		&Setup{},
 	}
-	err = DB.AutoMigrate(&Token{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&User{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Option{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Redemption{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&RedemptionLog{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Ability{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Log{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Midjourney{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&TopUp{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&QuotaData{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Task{})
-	if err != nil {
-		return err
-	}
-	err = DB.AutoMigrate(&Setup{})
-	if err != nil {
-		return err
+
+	for _, model := range modelsToMigrate {
+		err := DB.AutoMigrate(model)
+		if err != nil {
+			// 检查是否是"表已存在"错误 (仅限 PostgreSQL)
+			if common.UsingPostgreSQL && strings.Contains(err.Error(), "already exists") {
+				common.SysLog("表 " + common.Get  ModelName(model) + " 已存在，跳过创建")
+			} else {
+				return err
+			}
+		}
 	}
 
 	common.SysLog("database migrated")
