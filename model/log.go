@@ -97,7 +97,12 @@ func RecordConsumeLog(c *gin.Context, userId int, channelId int, promptTokens in
 		return
 	}
 	username := c.GetString("username")
-	otherStr := common.MapToJsonStr(other)
+	var otherStr string
+	if common.LogContentEnabled {
+		otherStr = common.MapToJsonStr(other)
+	} else {
+		otherStr = "" // 或者 common.MapToJsonStr(make(map[string]interface{}))
+	}
 	log := &Log{
 		UserId:           userId,
 		Username:         username,

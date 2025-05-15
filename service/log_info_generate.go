@@ -1,6 +1,7 @@
 package service
 
 import (
+	"veloera/common"
 	"veloera/dto"
 	relaycommon "veloera/relay/common"
 
@@ -26,15 +27,17 @@ func GenerateTextOtherInfo(ctx *gin.Context, relayInfo *relaycommon.RelayInfo, m
 	}
 
 	// 添加输入输出内容
-	if relayInfo.Other != nil {
-		if inputContent, exists := relayInfo.Other["input_content"]; exists {
-			other["input_content"] = inputContent
-		}
-		if outputContent, exists := relayInfo.Other["output_content"]; exists {
-			other["output_content"] = outputContent
-		}
-		if context, exists := relayInfo.Other["context"]; exists {
-			other["context"] = context
+	if common.LogContentEnabled {
+		if relayInfo.Other != nil {
+			if inputContent, exists := relayInfo.Other["input_content"]; exists {
+				other["input_content"] = inputContent
+			}
+			if outputContent, exists := relayInfo.Other["output_content"]; exists {
+				other["output_content"] = outputContent
+			}
+			if context, exists := relayInfo.Other["context"]; exists {
+				other["context"] = context
+			}
 		}
 	}
 
