@@ -1522,6 +1522,7 @@ const ChannelsTable = () => {
       <div
         style={{
           marginTop: 20,
+          marginBottom: 20,
           display: 'flex',
           flexDirection: isMobile() ? 'column' : 'row',
           alignItems: isMobile() ? 'flex-start' : 'center',

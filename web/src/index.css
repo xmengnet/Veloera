@@ -39,6 +39,14 @@ body {
   padding-right: 30px;
 }
 
+.semi-banner {
+  border-radius: 5px;
+}
+
+.semi-table-body {
+  border-radius: 5px;
+}
+
 @media only screen and (max-width: 767px) {
   /*.semi-navigation-sub-wrap .semi-navigation-sub-title, .semi-navigation-item {*/
   /*  padding: 0 0;*/
@@ -196,41 +204,6 @@ code {
     source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
-.semi-navigation-item {
-  margin-bottom: 0;
-}
-
-/* 自定义侧边栏按钮悬停效果 */
-.semi-navigation-item:hover {
-  transform: translateX(2px);
-  box-shadow: 0 2px 8px rgba(var(--semi-color-primary-rgb), 0.2);
-}
-
-/* 自定义侧边栏按钮选中效果 */
-.semi-navigation-item-selected {
-  position: relative;
-  overflow: hidden;
-}
-
-.semi-navigation-item-selected::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  height: 100%;
-  width: 4px;
-  background-color: var(--semi-color-primary);
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(-100%);
-  }
-  to {
-    transform: translateY(0);
-  }
-}
 
 /*.semi-navigation-vertical {*/
 /*  !*flex: 0 0 auto;*!*/
