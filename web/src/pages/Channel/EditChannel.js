@@ -246,9 +246,8 @@ function type2secretPrompt(type) {
 
 // Function to check if a channel type supports multi-key view (excluding type 41 which is textarea)
 const supportsMultiKeyView = (type) => {
-  // Add channel types here that support multi-key input via comma separation
-  const multiKeyTypes = [1, 3, 5, 8, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 42, 43, 44, 45]; // Example types, adjust as needed
-  return multiKeyTypes.includes(type);
+  // Multi-key view is supported for all types except type 41 (which uses a textarea)
+  return type !== 41;
 };
 
 const EditChannel = (props) => {
