@@ -16,6 +16,7 @@ type GeminiSettings struct {
 // 默认配置
 var defaultGeminiSettings = GeminiSettings{
 	SafetySettings: map[string]string{
+		"default":                         "OFF",
 		"HARM_CATEGORY_HARASSMENT":        "BLOCK_NONE",
 		"HARM_CATEGORY_HATE_SPEECH":       "BLOCK_NONE",
 		"HARM_CATEGORY_SEXUALLY_EXPLICIT": "BLOCK_NONE",
@@ -23,11 +24,8 @@ var defaultGeminiSettings = GeminiSettings{
 	},
 	VersionSettings: map[string]string{
 		"gemini-1.0-pro":   "v1beta",
-		"gemini-1.5-pro":   "v1beta",
-		"gemini-1.5-flash": "v1beta",
 	},
 	SupportedImagineModels: []string{
-		"imagen-1.0-playground",
 		"gemini-2.0-flash-exp-image-generation",
 		"gemini-2.0-flash-exp",
 	},
