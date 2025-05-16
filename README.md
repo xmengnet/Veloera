@@ -1,3 +1,5 @@
+![Veloera](https://socialify.git.ci/Veloera/Veloera/image?font=Raleway&forks=1&issues=1&name=1&owner=1&pattern=Plus&pulls=1&stargazers=1&theme=Auto)
+
 # Veloera
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/717a063ac5b8435cb78c8c3e71e6c5f3)](https://app.codacy.com/gh/Veloera/Veloera/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade) [![Go Report Card](https://goreportcard.com/badge/github.com/Veloera/Veloera)](https://goreportcard.com/report/github.com/Veloera/Veloera)
