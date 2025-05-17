@@ -57,6 +57,7 @@
     "@so1ve/prettier-config": "^3.1.0",
     "@vitejs/plugin-react": "^4.2.1",
     "prettier": "^3.0.0",
+    "sass-embedded": "^1.89.0",
     "typescript": "4.4.2",
     "vite": "^5.2.0"
   },
