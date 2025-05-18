@@ -23,6 +23,7 @@ var defaultGeminiSettings = GeminiSettings{
 		"HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
 	},
 	VersionSettings: map[string]string{
+		"default":          "v1beta",
 		"gemini-1.0-pro":   "v1beta",
 	},
 	SupportedImagineModels: []string{
