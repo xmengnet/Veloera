@@ -1,6 +1,7 @@
 name: Generate Changelog
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'v*'
@@ -13,6 +14,11 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+
+    - name: Checkout main branch and pull latest
+      run: |
+        git checkout main
+        git pull origin main
 
     - name: Generate Changelog
       uses: smichard/conventional_changelog@2.0.0
@@ -28,4 +34,4 @@ jobs:
       run: |
         git add CHANGELOG.md
         git commit -m "docs: :robot: changelog file generated" || echo "No changes to commit"
-        git push
+        git push origin main
