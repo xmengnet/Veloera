@@ -960,6 +960,7 @@ const EditChannel = (props) => {
                     {t('禁用多密钥视图')}
                 </Checkbox>
             </div>
+          <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
           {keyList.map((key, index) => (
             <div key={index} style={{ display: 'flex', marginBottom: '8px' }} className="key-input-item">
               <Input
@@ -980,6 +981,7 @@ const EditChannel = (props) => {
               />
             </div>
           ))}
+          </div>
           <Button
             icon={<IconPlusCircle />}
             onClick={() => addKeyInput()}
@@ -1075,6 +1077,25 @@ const EditChannel = (props) => {
           </Space>
         }
       />
+      {supportsMultiKeyView(inputs.type) && disableMultiKeyView && (
+        <Button
+          type='danger'
+          theme='borderless'
+          onClick={() => {
+            Modal.confirm({
+              title: t('确认清空密钥'),
+              content: t('您确定要清空密钥输入框的内容吗？'),
+              onOk: () => {
+                handleInputChange('key', '');
+                showSuccess(t('密钥已清空'));
+              },
+            });
+          }}
+          style={{ marginTop: 8 }}
+        >
+          {t('清空')}
+        </Button>
+      )}
       </>
     );
   };
