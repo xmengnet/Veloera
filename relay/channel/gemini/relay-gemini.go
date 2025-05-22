@@ -41,7 +41,7 @@ func CovertGemini2OpenAI(textRequest dto.GeneralOpenAIRequest, info *relaycommon
 		}
 	}
 
-	if model_setting.GetGeminiSettings().ThinkingAdapterEnabled {
+	if strings.HasPrefix(info.UpstreamModelName, "gemini-2.5-") && model_setting.GetGeminiSettings().ThinkingAdapterEnabled {
 		if strings.HasSuffix(info.OriginModelName, "-thinking") {
 			budgetTokens := model_setting.GetGeminiSettings().ThinkingAdapterBudgetTokensPercentage * float64(geminiRequest.GenerationConfig.MaxOutputTokens)
 			if budgetTokens == 0 || budgetTokens > 24576 {
@@ -727,7 +727,10 @@ func GeminiChatHandler(c *gin.Context, resp *http.Response, info *relaycommon.Re
 		CompletionTokens: geminiResponse.UsageMetadata.CandidatesTokenCount,
 		TotalTokens:      geminiResponse.UsageMetadata.TotalTokenCount,
 	}
-	usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
+	// Only process ReasoningTokens for gemini-2.5- models
+	if strings.HasPrefix(info.UpstreamModelName, "gemini-2.5-") {
+		usage.CompletionTokenDetails.ReasoningTokens = geminiResponse.UsageMetadata.ThoughtsTokenCount
+	}
 	fullTextResponse.Usage = *usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
