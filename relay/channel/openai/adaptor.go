@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"strings"
 	"veloera/common"
 	constant2 "veloera/constant"
@@ -90,7 +91,10 @@ func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
 		requestURL = fmt.Sprintf("%s?api-version=%s", requestURL, apiVersion)
 		task := strings.TrimPrefix(requestURL, "/v1/")
 		model_ := info.UpstreamModelName
-		model_ = strings.Replace(model_, ".", "", -1)
+		// 2025年5月10日后创建的渠道不移除.
+		if info.ChannelCreateTime < constant2.AzureNoRemoveDotTime {
+			model_ = strings.Replace(model_, ".", "", -1)
+		}
 		// https://github.com/songquanpeng/veloera/issues/67
 		requestURL = fmt.Sprintf("/openai/deployments/%s/%s", model_, task)
 		if info.RelayMode == constant.RelayModeRealtime {
