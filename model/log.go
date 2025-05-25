@@ -57,15 +57,18 @@ func formatUserLogs(logs []*Log) {
 	}
 }
 
-func GetLogByKey(key string) (logs []*Log, err error) {
+func GetLogByKey(key string, userId int) (logs []*Log, err error) {
 	if os.Getenv("LOG_SQL_DSN") != "" {
 		var tk Token
 		if err = DB.Model(&Token{}).Where(keyCol+"=?", strings.TrimPrefix(key, "sk-")).First(&tk).Error; err != nil {
 			return nil, err
 		}
+		if tk.UserId != userId { // 验证token是否属于当前用户
+			return nil, fmt.Errorf("token does not belong to current user")
+		}
 		err = LOG_DB.Model(&Log{}).Where("token_id=?", tk.Id).Find(&logs).Error
 	} else {
-		err = LOG_DB.Joins("left join tokens on tokens.id = logs.token_id").Where("tokens.key = ?", strings.TrimPrefix(key, "sk-")).Find(&logs).Error
+		err = LOG_DB.Joins("left join tokens on tokens.id = logs.token_id").Where("tokens.key = ? AND tokens.user_id = ?", strings.TrimPrefix(key, "sk-"), userId).Find(&logs).Error
 	}
 	formatUserLogs(logs)
 	return logs, err
