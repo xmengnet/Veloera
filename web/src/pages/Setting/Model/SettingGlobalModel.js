@@ -16,6 +16,7 @@ export default function SettingGlobalModel(props) {
   const [loading, setLoading] = useState(false);
   const [inputs, setInputs] = useState({
     'global.pass_through_request_enabled': false,
+    'global.hide_upstream_error_enabled': false,
     'general_setting.ping_interval_enabled': false,
     'general_setting.ping_interval_seconds': 60,
   });
@@ -88,6 +89,19 @@ export default function SettingGlobalModel(props) {
                   extraText={
                     '开启后，所有请求将直接透传给上游，不会进行任何处理（重定向和渠道适配也将失效）,请谨慎开启'
                   }
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+                <Form.Switch
+                  label={t('隐藏上游报错信息')}
+                  field={'global.hide_upstream_error_enabled'}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      'global.hide_upstream_error_enabled': value,
+                    })
+                  }
+                  extraText={'开启后，只返回统一的上游错误信息'}
                 />
               </Col>
             </Row>
