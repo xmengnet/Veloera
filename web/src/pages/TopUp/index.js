@@ -17,6 +17,7 @@ import {
   Space,
   Modal,
   Toast,
+  Banner,
 } from '@douyinfe/semi-ui';
 import Title from '@douyinfe/semi-ui/lib/es/typography/title';
 import Text from '@douyinfe/semi-ui/lib/es/typography/text';
@@ -55,7 +56,7 @@ const TopUp = () => {
           successMessage = t('礼品码兑换成功！');
         }
         showSuccess(successMessage);
-        
+
         // 确保 quota 是数字并且正确渲染
         const quotaAmount = parseInt(data.quota, 10);
         Modal.success({
@@ -63,7 +64,7 @@ const TopUp = () => {
           content: t('成功兑换额度：') + renderQuotaWithAmount(quotaAmount),
           centered: true,
         });
-        
+
         setUserQuota((quota) => quota + quotaAmount);
         setRedemptionCode('');
       } else {
@@ -285,49 +286,69 @@ const TopUp = () => {
               </div>
               <div style={{ marginTop: 20 }}>
                 <Divider>{t('在线充值')}</Divider>
-                <Form>
-                  <Form.Input
-                    disabled={!enableOnlineTopUp}
-                    field={'redemptionCount'}
-                    label={t('实付金额：') + ' ' + renderAmount()}
-                    placeholder={
-                      t('充值数量，最低 ') + renderQuotaWithAmount(minTopUp)
-                    }
-                    name='redemptionCount'
-                    type={'number'}
-                    value={topUpCount}
-                    onChange={async (value) => {
-                      if (value < 1) {
-                        value = 1;
+                {enableOnlineTopUp ? (
+                  <Form>
+                    <Form.Input
+                      disabled={!enableOnlineTopUp}
+                      field={'redemptionCount'}
+                      label={t('实付金额：') + ' ' + renderAmount()}
+                      placeholder={
+                        t('充值数量，最低 ') + renderQuotaWithAmount(minTopUp)
                       }
-                      setTopUpCount(value);
-                      await getAmount(value);
-                    }}
-                  />
-                  <Space>
-                    <Button
-                      type={'primary'}
-                      theme={'solid'}
-                      onClick={async () => {
-                        preTopUp('zfb');
+                      name='redemptionCount'
+                      type={'number'}
+                      value={topUpCount}
+                      onChange={async (value) => {
+                        if (value < 1) {
+                          value = 1;
+                        }
+                        setTopUpCount(value);
+                        await getAmount(value);
                       }}
-                    >
-                      {t('支付宝')}
-                    </Button>
-                    <Button
-                      style={{
-                        backgroundColor: 'rgba(var(--semi-green-5), 1)',
-                      }}
-                      type={'primary'}
-                      theme={'solid'}
-                      onClick={async () => {
-                        preTopUp('wx');
-                      }}
-                    >
-                      {t('微信')}
-                    </Button>
-                  </Space>
-                </Form>
+                    />
+                    <Space>
+                      <Button
+                        type={'primary'}
+                        theme={'solid'}
+                        onClick={() => preTopUp('zfb')}
+                      >
+                        {t('支付宝')}
+                      </Button>
+                      <Button
+                        style={{
+                          backgroundColor: 'rgba(var(--semi-green-5), 1)',
+                        }}
+                        type={'primary'}
+                        theme={'solid'}
+                        onClick={() => preTopUp('wx')}
+                      >
+                        {t('微信')}
+                      </Button>
+                    </Space>
+                  </Form>
+                ) : (
+                  <div style={{marginTop: '10px'}}>
+                    <Banner
+                      fullMode={false}
+                      type='info'
+                      bordered
+                      icon={null}
+                      closeIcon={null}
+                      title={
+                        <div
+                          style={{
+                            fontWeight: 'bold',
+                            fontSize: '14px',
+                            lineHeight: '22px',
+                          }}
+                        >
+                          {t('管理员已关闭在线充值')}
+                        </div>
+                      }
+                    />
+                    <br />
+                  </div>
+                )}
               </div>
               {/*<div style={{ display: 'flex', justifyContent: 'right' }}>*/}
               {/*    <Text>*/}
