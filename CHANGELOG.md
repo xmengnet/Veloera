@@ -6,9 +6,84 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased changes
 
+## v0.3.21.1 (2025-06-01)
+
+### Bug Fixes
+- key cannot be cleared in edit channel mode (#68) [`c09c25ba`](https://github.com/Veloera/Veloera/commit/c09c25ba)
+- wrongly add ThinkingConfig to normal models (#66) [`dff0f84b`](https://github.com/Veloera/Veloera/commit/dff0f84b)
+- fetch_models use wrong apiKey and release.yml cache invalid (#67) [`c93f8cf9`](https://github.com/Veloera/Veloera/commit/c93f8cf9)
+
+## v0.3.21 (2025-06-01)
+
+## v0.3.20 (2025-06-01)
+
+### Feature
+- add URL code handling and user quota retrieval [`bf0562e3`](https://github.com/Veloera/Veloera/commit/bf0562e3)
+- update navigation to handle return URLs [`54ed4bcd`](https://github.com/Veloera/Veloera/commit/54ed4bcd)
+- Add new new customer rebate function (#49) [`9ed91de9`](https://github.com/Veloera/Veloera/commit/9ed91de9)
+
+### Bug Fixes
+- encode URL parameters for login redirection [`6b9fde84`](https://github.com/Veloera/Veloera/commit/6b9fde84)
+- region global is not working for Vertex AI [`9dfc4abe`](https://github.com/Veloera/Veloera/commit/9dfc4abe)
+- fix pop-ups blocked issuse (#63) [`9295addb`](https://github.com/Veloera/Veloera/commit/9295addb)
+
+### Refactor
+- remove checkedText from most switches [`0bd43945`](https://github.com/Veloera/Veloera/commit/0bd43945)
+
+## v0.3.19 (2025-05-30)
+
+### Feature
+- use a banner to show that online recharge is not enabled [`87de5635`](https://github.com/Veloera/Veloera/commit/87de5635)
+- add option to hide upstream error details (#61) [`460990c4`](https://github.com/Veloera/Veloera/commit/460990c4)
+- Remember tag aggregation mode state (#56) [`cd38d7e9`](https://github.com/Veloera/Veloera/commit/cd38d7e9)
+
+### Other
+- merge: Merge branch 'main' of https://github.com/Veloera/Veloera [`46db3401`](https://github.com/Veloera/Veloera/commit/46db3401)
+
+## v0.3.18 (2025-05-25)
+
+### Feature
+- no longer remove the dots from the model name from Azure channel [`7d67a02b`](https://github.com/Veloera/Veloera/commit/7d67a02b)
+
+### Bug Fixes
+- add user-level auth for /api/log/token, and make sure the token belongs to that user [`529dc4f4`](https://github.com/Veloera/Veloera/commit/529dc4f4)
+- removed unused import of net/textproto [`43bd609a`](https://github.com/Veloera/Veloera/commit/43bd609a)
+- fix typo in aws constants [`eb91dabc`](https://github.com/Veloera/Veloera/commit/eb91dabc)
+
+### Continuous Integration
+- let changelog workflow no longer run when new tag are pushed [`9bb69a31`](https://github.com/Veloera/Veloera/commit/9bb69a31)
+
+## v0.3.17 (2025-05-24)
+
+### Feature
+- Enhance channel refresh and search logic [`88bbdeac`](https://github.com/Veloera/Veloera/commit/88bbdeac)
+- support for Claude 4 series [`bd398e1e`](https://github.com/Veloera/Veloera/commit/bd398e1e)
+
+### Bug Fixes
+- fix cannot get max user id [`ca8d7645`](https://github.com/Veloera/Veloera/commit/ca8d7645)
+- only use thinking adapter for model in Gemini 2.5 series [`fc3334f4`](https://github.com/Veloera/Veloera/commit/fc3334f4)
+
+### Chore
+- fix typo (#47) [`7af24d0f`](https://github.com/Veloera/Veloera/commit/7af24d0f)
+
+### Other
+- merge: Merge branch 'main' of https://github.com/Veloera/Veloera [`22504d19`](https://github.com/Veloera/Veloera/commit/22504d19)
+- revert: revert "feat: add setting to disable chat content recording" [`1dd9bc82`](https://github.com/Veloera/Veloera/commit/1dd9bc82)
+
+## v0.3.16 (2025-05-19)
+
+### Feature
+- enhance channel edit page key input and model selection UI [`5b1e6d60`](https://github.com/Veloera/Veloera/commit/5b1e6d60)
+
 ### Continuous Integration
 - fix permission err [`be854d14`](https://github.com/Veloera/Veloera/commit/be854d14)
 - fix branch err [`39e747f2`](https://github.com/Veloera/Veloera/commit/39e747f2)
+
+### Documentation
+- :robot: changelog file generated [`a92b34a5`](https://github.com/Veloera/Veloera/commit/a92b34a5)
+
+### Chore
+- Merge branch 'main' of https://github.com/Veloera/Veloera [`6fe18323`](https://github.com/Veloera/Veloera/commit/6fe18323)
 
 ## v0.3.15 (2025-05-18)
 
