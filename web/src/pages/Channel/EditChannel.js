@@ -107,7 +107,7 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
         res = await API.post('/api/channel/fetch_models', {
           base_url: baseUrl,
           type: type,
-          key: apiKey,
+          key: apiKey.split(',')[0].trim(),
         });
       } else {
         // 如果在创建模式，使用提供的凭据
@@ -120,7 +120,7 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
         res = await API.post('/api/channel/fetch_models', {
           base_url: baseUrl,
           type: type,
-          key: apiKey,
+          key: apiKey.split(',')[0].trim(),
         });
       }
 
@@ -575,7 +575,7 @@ const EditChannel = (props) => {
     //   return;
     // }
     setLoading(true);
-    const models = inputs['models'] || [];
+    const models = inputs.models || [];
     let err = false;
     let fetchedModels = [];
 
@@ -589,15 +589,15 @@ const EditChannel = (props) => {
       }
     } else {
       // 如果是新建模式，通过后端代理获取模型列表
-      if (!inputs?.['key']) {
+      if (!inputs?.key) {
         showError(t('请填写密钥'));
         err = true;
       } else {
         try {
           const res = await API.post('/api/channel/fetch_models', {
-            base_url: inputs['base_url'],
-            type: inputs['type'],
-            key: inputs['key'],
+            base_url: inputs.base_url,
+            type: inputs.type,
+            key: inputs.key.split(',')[0].trim(),
           });
 
           if (res.data && res.data.success) {
