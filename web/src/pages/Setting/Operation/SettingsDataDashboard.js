@@ -92,8 +92,6 @@ export default function DataDashboard(props) {
                   field={'DataExportEnabled'}
                   label={t('启用数据看板（实验性）')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) => {
                     setInputs({
                       ...inputs,

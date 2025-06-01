@@ -84,8 +84,6 @@ export default function RequestRateLimit(props) {
                   field={'ModelRequestRateLimitEnabled'}
                   label={t('启用用户模型请求速率限制（可能会影响高并发性能）')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) => {
                     setInputs({
                       ...inputs,

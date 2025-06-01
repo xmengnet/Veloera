@@ -123,8 +123,6 @@ export default function SettingsMonitoring(props) {
                   field={'AutomaticDisableChannelEnabled'}
                   label={t('失败时自动禁用通道')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) => {
                     setInputs({
                       ...inputs,
@@ -138,8 +136,6 @@ export default function SettingsMonitoring(props) {
                   field={'AutomaticEnableChannelEnabled'}
                   label={t('成功时自动启用通道')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) =>
                     setInputs({
                       ...inputs,

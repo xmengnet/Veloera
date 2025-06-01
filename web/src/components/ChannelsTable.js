@@ -1367,7 +1367,6 @@ const ChannelsTable = () => {
             <Switch
               checked={idSort}
               label={t('使用ID排序')}
-              uncheckedText={t('关')}
               aria-label={t('是否用ID排序')}
               onChange={(v) => {
                 localStorage.setItem('id-sort', v + '');
@@ -1493,7 +1492,6 @@ const ChannelsTable = () => {
           </Typography.Text>
           <Switch
             label={t('开启批量操作')}
-            uncheckedText={t('关')}
             aria-label={t('是否开启批量操作')}
             onChange={(v) => {
               setEnableBatchDelete(v);
@@ -1557,7 +1555,6 @@ const ChannelsTable = () => {
           <Switch
             checked={enableTagMode}
             label={t('标签聚合模式')}
-            uncheckedText={t('关')}
             aria-label={t('是否启用标签聚合')}
             onChange={(v) => {
               setEnableTagMode(v);

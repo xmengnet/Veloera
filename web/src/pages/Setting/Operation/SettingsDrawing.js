@@ -86,8 +86,6 @@ export default function SettingsDrawing(props) {
                   field={'DrawingEnabled'}
                   label={t('启用绘图功能')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) => {
                     setInputs({
                       ...inputs,
@@ -101,8 +99,6 @@ export default function SettingsDrawing(props) {
                   field={'MjNotifyEnabled'}
                   label={t('允许回调（会泄露服务器 IP 地址）')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) =>
                     setInputs({
                       ...inputs,
@@ -116,8 +112,6 @@ export default function SettingsDrawing(props) {
                   field={'MjAccountFilterEnabled'}
                   label={t('允许 AccountFilter 参数')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) =>
                     setInputs({
                       ...inputs,
@@ -131,8 +125,6 @@ export default function SettingsDrawing(props) {
                   field={'MjForwardUrlEnabled'}
                   label={t('开启之后将上游地址替换为服务器地址')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) =>
                     setInputs({
                       ...inputs,
@@ -152,8 +144,6 @@ export default function SettingsDrawing(props) {
                     </>
                   }
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) =>
                     setInputs({
                       ...inputs,
@@ -167,8 +157,6 @@ export default function SettingsDrawing(props) {
                   field={'MjActionCheckSuccessEnabled'}
                   label={t('检测必须等待绘图成功才能进行放大等操作')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) =>
                     setInputs({
                       ...inputs,

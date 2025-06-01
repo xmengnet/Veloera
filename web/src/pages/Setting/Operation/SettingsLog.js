@@ -106,8 +106,6 @@ export default function SettingsLog(props) {
                   field={'LogConsumeEnabled'}
                   label={t('启用额度消费日志记录')}
                   size='default'
-                  checkedText='｜'
-                  uncheckedText='〇'
                   onChange={(value) => {
                     setInputs({
                       ...inputs,
