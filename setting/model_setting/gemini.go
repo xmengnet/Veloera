@@ -24,8 +24,8 @@ var defaultGeminiSettings = GeminiSettings{
 		"HARM_CATEGORY_DANGEROUS_CONTENT": "BLOCK_NONE",
 	},
 	VersionSettings: map[string]string{
-		"default":          "v1beta",
-		"gemini-1.0-pro":   "v1beta",
+		"default":        "v1beta",
+		"gemini-1.0-pro": "v1beta",
 	},
 	SupportedImagineModels: []string{
 		"gemini-2.0-flash-exp-image-generation",
@@ -33,7 +33,7 @@ var defaultGeminiSettings = GeminiSettings{
 	},
 	ThinkingAdapterEnabled:                false,
 	ThinkingAdapterBudgetTokensPercentage: 0.6,
-	ModelsSupportedThinkingBudget:         []string{
+	ModelsSupportedThinkingBudget: []string{
 		"gemini-2.5-flash-preview-05-20",
 		"gemini-2.5-flash-preview-04-17",
 	},

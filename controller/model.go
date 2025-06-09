@@ -201,7 +201,7 @@ func ListModels(c *gin.Context) {
 		for allowModel := range tokenModelLimit {
 			// Check if this model has prefix mappings
 			prefixedModels := modelPrefixMap[allowModel]
-			
+
 			// Add base model first
 			if _, ok := openAIModelsMap[allowModel]; ok {
 				modelInfo := openAIModelsMap[allowModel]

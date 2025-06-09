@@ -3,6 +3,7 @@ package gemini
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"strings"
@@ -14,7 +15,6 @@ import (
 	"veloera/relay/helper"
 	"veloera/service"
 	"veloera/setting/model_setting"
-	"github.com/gin-gonic/gin"
 )
 
 // Setting safety to the lowest possible values since Gemini is already powerless enough

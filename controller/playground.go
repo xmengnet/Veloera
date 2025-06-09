@@ -58,12 +58,12 @@ func Playground(c *gin.Context) {
 		c.Set("group", group)
 	}
 	c.Set("token_name", "playground-"+group)
-	
+
 	// Handle model prefix for channel selection (similar to middleware/distributor.go)
 	originalModel := playgroundRequest.Model
 	modelToQuery := playgroundRequest.Model
 	var channel *model.Channel
-	
+
 	// Check if the model has a prefix that should be used for routing
 	modelPrefix := ""
 	for prefix := range middleware.GetPrefixChannels(group) {
@@ -74,7 +74,7 @@ func Playground(c *gin.Context) {
 			break
 		}
 	}
-	
+
 	// Select channel based on whether we found a prefix
 	if modelPrefix != "" {
 		// Use prefix-based channel selection
@@ -83,7 +83,7 @@ func Playground(c *gin.Context) {
 		// Use normal channel selection
 		channel, err = model.CacheGetRandomSatisfiedChannel(group, modelToQuery, 0)
 	}
-	
+
 	if err != nil {
 		message := fmt.Sprintf("当前分组 %s 下对于模型 %s 无可用渠道", group, originalModel)
 		openaiErr = service.OpenAIErrorWrapperLocal(errors.New(message), "get_playground_channel_failed", http.StatusInternalServerError)

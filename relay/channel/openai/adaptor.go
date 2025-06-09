@@ -62,20 +62,20 @@ func (a *Adaptor) Init(info *relaycommon.RelayInfo) {
 }
 
 func (a *Adaptor) GetRequestURL(info *relaycommon.RelayInfo) (string, error) {
-    if info.RelayFormat == relaycommon.RelayFormatClaude || info.RelayMode == constant.RelayModeResponses {
-        var suffixPath string
-        if info.RelayFormat == relaycommon.RelayFormatClaude {
-            suffixPath = "chat/completions"
-        } else {
-            suffixPath = "responses"
-        }
+	if info.RelayFormat == relaycommon.RelayFormatClaude || info.RelayMode == constant.RelayModeResponses {
+		var suffixPath string
+		if info.RelayFormat == relaycommon.RelayFormatClaude {
+			suffixPath = "chat/completions"
+		} else {
+			suffixPath = "responses"
+		}
 
-        // 统一检查 BaseUrl 是否以 "/" 结尾
-        if strings.HasSuffix(info.BaseUrl, "/") {
-            return info.BaseUrl + suffixPath, nil
-        }
-        return fmt.Sprintf("%s/v1/%s", info.BaseUrl, suffixPath), nil
-    }
+		// 统一检查 BaseUrl 是否以 "/" 结尾
+		if strings.HasSuffix(info.BaseUrl, "/") {
+			return info.BaseUrl + suffixPath, nil
+		}
+		return fmt.Sprintf("%s/v1/%s", info.BaseUrl, suffixPath), nil
+	}
 	if info.RelayMode == constant.RelayModeRealtime {
 		if strings.HasPrefix(info.BaseUrl, "https://") {
 			baseUrl := strings.TrimPrefix(info.BaseUrl, "https://")
