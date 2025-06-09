@@ -97,7 +97,8 @@ func RedisHDelObj(key string) error {
 		SysLog(fmt.Sprintf("Redis HDEL: key=%s", key))
 	}
 	ctx := context.Background()
-	return RDB.HDel(ctx, key).Err()
+	return RDB.Del(ctx, key).Err()
+	// TODO: Use RedisDel.
 }
 
 func RedisHSetObj(key string, obj interface{}, expiration time.Duration) error {
