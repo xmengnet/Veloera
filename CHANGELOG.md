@@ -6,6 +6,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## Unreleased changes
 
+## v0.3.24 (2025-06-09)
+
+### Bug Fixes
+- change RedisHDelObj to use Del instead of HDel [`aad6531b`](https://github.com/Veloera/Veloera/commit/aad6531b)
+- prevent multiple redemptions of the same code under high concurrency (#88) [`19ffa60c`](https://github.com/Veloera/Veloera/commit/19ffa60c)
+
+## v0.3.23.1 (2025-06-09)
+
+### Bug Fixes
+- remove duplicate gin import in relay-gemini.go (#86) [`fc184745`](https://github.com/Veloera/Veloera/commit/fc184745)
+
+## v0.3.23 (2025-06-09)
+
+### Feature
+- enhance Gemini relay to support Thought processing (#80) [`0fd7c5a4`](https://github.com/Veloera/Veloera/commit/0fd7c5a4)
+
+### Bug Fixes
+- display duplicate models with and without prefixes (#85) [`3f37ad53`](https://github.com/Veloera/Veloera/commit/3f37ad53)
+- enhance schema cleaning (#79) [`5c4ce2a1`](https://github.com/Veloera/Veloera/commit/5c4ce2a1)
+
+### Refactor
+- format code [`1b74bb95`](https://github.com/Veloera/Veloera/commit/1b74bb95)
+
+### Other
+- Merge branch 'main' of https://github.com/Veloera/Veloera [`40a7d134`](https://github.com/Veloera/Veloera/commit/40a7d134)
+
+## v0.3.22 (2025-06-05)
+
+### Feature
+- refresh prefix cache when channel changes (#77) [`a23d6c3d`](https://github.com/Veloera/Veloera/commit/a23d6c3d)
+
+### Bug Fixes
+- remove deprecated Claude API (#73) [`eaaeb315`](https://github.com/Veloera/Veloera/commit/eaaeb315)
+- support multiple channels with different prefixes for same model id without conflict (#70) [`082a7b69`](https://github.com/Veloera/Veloera/commit/082a7b69)
+
+### Documentation
+- :robot: changelog file generated [`b69df048`](https://github.com/Veloera/Veloera/commit/b69df048)
+
+### Refactor
+- simplify request URL generation logic [`8c445790`](https://github.com/Veloera/Veloera/commit/8c445790)
+
 ## v0.3.21.1 (2025-06-01)
 
 ### Bug Fixes
