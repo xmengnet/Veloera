@@ -13,6 +13,7 @@ import (
 	"veloera/common"
 	"veloera/constant"
 	"veloera/dto"
+	openaichannel "veloera/relay/channel/openai"
 	relaycommon "veloera/relay/common"
 	"veloera/relay/helper"
 	"veloera/service"
@@ -841,4 +842,61 @@ func GeminiEmbeddingHandler(c *gin.Context, resp *http.Response, info *relaycomm
 	_, _ = c.Writer.Write(jsonResponse)
 
 	return usage, nil
+}
+
+func GeminiChatPseudoStreamHandler(c *gin.Context, resp *http.Response, info *relaycommon.RelayInfo) (*dto.OpenAIErrorWithStatusCode, *dto.Usage) {
+	geminiResp, errResp := parseGeminiChatResponse(resp)
+	if errResp != nil {
+		return errResp, nil
+	}
+
+	fullTextResponse := responseGeminiChat2OpenAI(geminiResp)
+	fullTextResponse.Model = info.UpstreamModelName
+	usage := buildGeminiUsage(geminiResp)
+	fullTextResponse.Usage = *usage
+
+	helper.SetEventStreamHeaders(c)
+	info.SetFirstResponseTime()
+
+	streamResp := openaichannel.BuildStreamChunkFromTextResponse(&fullTextResponse)
+	_ = helper.ObjectData(c, streamResp)
+	if info.ShouldIncludeUsage {
+		final := helper.GenerateFinalUsageResponse(helper.GetResponseID(c), common.GetTimestamp(), info.UpstreamModelName, *usage)
+		_ = helper.ObjectData(c, final)
+	}
+	helper.Done(c)
+	return nil, usage
+}
+
+func parseGeminiChatResponse(resp *http.Response) (*GeminiChatResponse, *dto.OpenAIErrorWithStatusCode) {
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, service.OpenAIErrorWrapper(err, "read_response_body_failed", http.StatusInternalServerError)
+	}
+	if err = resp.Body.Close(); err != nil {
+		return nil, service.OpenAIErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError)
+	}
+	var geminiResponse GeminiChatResponse
+	if err = json.Unmarshal(body, &geminiResponse); err != nil {
+		return nil, service.OpenAIErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
+	}
+	if len(geminiResponse.Candidates) == 0 {
+		return nil, &dto.OpenAIErrorWithStatusCode{
+			Error:      dto.OpenAIError{Message: "No candidates returned", Type: "server_error", Code: 500},
+			StatusCode: resp.StatusCode,
+		}
+	}
+	return &geminiResponse, nil
+}
+
+func buildGeminiUsage(gResp *GeminiChatResponse) *dto.Usage {
+	usage := &dto.Usage{
+		PromptTokens:     gResp.UsageMetadata.PromptTokenCount,
+		CompletionTokens: gResp.UsageMetadata.CandidatesTokenCount,
+		TotalTokens:      gResp.UsageMetadata.TotalTokenCount,
+	}
+	if gResp.UsageMetadata.ThoughtsTokenCount > 0 {
+		usage.CompletionTokenDetails.ReasoningTokens = gResp.UsageMetadata.ThoughtsTokenCount
+	}
+	return usage
 }
