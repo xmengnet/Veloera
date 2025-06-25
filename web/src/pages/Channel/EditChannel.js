@@ -1295,7 +1295,7 @@ const EditChannel = (props) => {
                 <Input
                   label={t('API地址')}
                   name="base_url"
-                  placeholder={t('此项可选，用于通过自定义API地址来进行 API 调用，末尾不要带/v1和/')}
+                  placeholder={t('此项可选，用于通过自定义API地址来进行 API 调用，末尾带 / 以不使用默认 /v1 前缀')}
                   onChange={(value) => {
                     handleInputChange('base_url', value);
                   }}
