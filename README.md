@@ -13,6 +13,22 @@
 原汁原味的 New API 体验, 对界面无大改动, 遵循 Apache 2.0 协议, 无商用限制, 承诺不变质.  
 添加极多原版不计划添加的特性. 以下只是部分.  
 
+## 赞助商
+
+感谢这些厂商对 Veloera 的支持:  
+
+<a href="https://edgeone.ai/?from=github" target="_blank">
+  <img src="https://edgeone.ai/_next/static/media/headLogo.daeb48ad.png?auto=format&fit=max&w=200" width=200 />
+</a>
+<br />CDN acceleration and security protection for this project are sponsored by Tencent EdgeOne.
+
+<br />
+
+成为赞助者:  
+<a href="https://opencollective.com/veloeraorg/donate" target="_blank">
+  <img src="https://opencollective.com/veloeraorg/donate/button.png?color=blue" width=200 />
+</a>
+
 ## 特性
 
 - 支持以 `,` 分割的单渠道多 Key, 随机选取.
