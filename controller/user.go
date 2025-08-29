@@ -587,6 +587,15 @@ func GetUserModels(c *gin.Context) {
 		}
 	}
 
+	// 添加虚拟模型到返回列表中
+	virtualModels := model.GetAllVirtualModels()
+	for _, virtualModel := range virtualModels {
+		if !addedModels[virtualModel] {
+			models = append(models, virtualModel)
+			addedModels[virtualModel] = true
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -989,6 +998,55 @@ func TopUp(c *gin.Context) {
 		})
 		return
 	}
+
+	// Validate turnstile if enabled
+	if common.TurnstileCheckEnabled {
+		response := c.Query("turnstile")
+		if response == "" {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Turnstile token 为空",
+			})
+			return
+		}
+
+		rawRes, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", url.Values{
+			"secret":   {common.TurnstileSecretKey},
+			"response": {response},
+			"remoteip": {c.ClientIP()},
+		})
+		if err != nil {
+			common.SysError(err.Error())
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		defer rawRes.Body.Close()
+
+		var res struct {
+			Success bool `json:"success"`
+		}
+		err = json.NewDecoder(rawRes.Body).Decode(&res)
+		if err != nil {
+			common.SysError(err.Error())
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+
+		if !res.Success {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "Turnstile 校验失败，请刷新重试！",
+			})
+			return
+		}
+	}
+
 	id := c.GetInt("id")
 	quota, isGift, err := model.Redeem(req.Key, id) // 修改这里，接收所有三个返回值
 	if err != nil {
@@ -1159,6 +1217,68 @@ func CheckIn(c *gin.Context) {
 			"message": err.Error(),
 		})
 		return
+	}
+
+	// Validate turnstile if enabled
+	if common.TurnstileCheckEnabled {
+		session := sessions.Default(c)
+		turnstileChecked := session.Get("turnstile")
+		if turnstileChecked == nil {
+			response := c.Query("turnstile")
+			if response == "" {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "Turnstile token 为空",
+				})
+				return
+			}
+
+			rawRes, err := http.PostForm("https://challenges.cloudflare.com/turnstile/v0/siteverify", url.Values{
+				"secret":   {common.TurnstileSecretKey},
+				"response": {response},
+				"remoteip": {c.ClientIP()},
+			})
+			if err != nil {
+				common.SysError(err.Error())
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": err.Error(),
+				})
+				return
+			}
+			defer rawRes.Body.Close()
+
+			var res struct {
+				Success bool `json:"success"`
+			}
+			err = json.NewDecoder(rawRes.Body).Decode(&res)
+			if err != nil {
+				common.SysError(err.Error())
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": err.Error(),
+				})
+				return
+			}
+
+			if !res.Success {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "Turnstile 校验失败，请刷新重试！",
+				})
+				return
+			}
+
+			session.Set("turnstile", true)
+			err = session.Save()
+			if err != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"message": "无法保存会话信息，请重试",
+					"success": false,
+				})
+				return
+			}
+		}
 	}
 
 	// Get user and perform check-in

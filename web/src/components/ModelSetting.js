@@ -21,9 +21,10 @@ import { Card, Spin, Tabs } from '@douyinfe/semi-ui';
 
 import { API, showError, showSuccess } from '../helpers';
 import { useTranslation } from 'react-i18next';
-import SettingGeminiModel from '../pages/Setting/Model/SettingGeminiModel.js';
-import SettingClaudeModel from '../pages/Setting/Model/SettingClaudeModel.js';
-import SettingGlobalModel from '../pages/Setting/Model/SettingGlobalModel.js';
+import SettingGeminiModel from '../pages/Setting/Model/SettingGeminiModel';
+import SettingClaudeModel from '../pages/Setting/Model/SettingClaudeModel';
+import SettingGlobalModel from '../pages/Setting/Model/SettingGlobalModel';
+import SettingModelMapping from '../pages/Setting/Model/SettingModelMapping';
 
 const ModelSetting = () => {
   const { t } = useTranslation();
@@ -42,6 +43,10 @@ const ModelSetting = () => {
     'global.rate_limit_exempt_group': 'bulk-ok',
     'global.safe_check_exempt_enabled': false,
     'global.safe_check_exempt_group': 'nsfw-ok',
+    'global.auto_retry_enabled': false,
+    'global.auto_retry_count': 3,
+    'global.auto_retry_force_channel_switch': false,
+    'global.auto_retry_status_codes': '5xx,4xx',
     'general_setting.ping_interval_enabled': false,
     'general_setting.ping_interval_seconds': 60,
     'gemini.thinking_adapter_enabled': false,
@@ -68,7 +73,7 @@ const ModelSetting = () => {
           item.value = JSON.stringify(JSON.parse(item.value), null, 2);
         }
         if (item.key.endsWith('Enabled') || item.key.endsWith('enabled')) {
-          newInputs[item.key] = item.value === 'true' ? true : false;
+          newInputs[item.key] = item.value === 'true';
         } else {
           newInputs[item.key] = item.value;
         }
@@ -109,6 +114,10 @@ const ModelSetting = () => {
         {/* Claude */}
         <Card style={{ marginTop: '10px' }}>
           <SettingClaudeModel options={inputs} refresh={onRefresh} />
+        </Card>
+        {/* Model Mapping */}
+        <Card style={{ marginTop: '10px' }}>
+          <SettingModelMapping />
         </Card>
       </Spin>
     </>

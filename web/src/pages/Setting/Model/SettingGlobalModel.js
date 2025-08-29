@@ -85,7 +85,11 @@ export default function SettingGlobalModel(props) {
     const currentInputs = {};
     for (let key in props.options) {
       if (Object.keys(inputs).includes(key)) {
-        currentInputs[key] = props.options[key];
+        // Convert string boolean values to actual booleans for switches
+        let value = props.options[key];
+        if (value === 'true') value = true;
+        if (value === 'false') value = false;
+        currentInputs[key] = value;
       }
     }
     setInputs(currentInputs);

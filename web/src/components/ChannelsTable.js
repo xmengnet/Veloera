@@ -17,8 +17,10 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import {
   API,
+  copy,
   isMobile,
   shouldShowPrompt,
   showError,
@@ -75,6 +77,351 @@ import { useTranslation } from 'react-i18next';
 function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
 }
+
+// 辅助函数：获取失败的模型统计
+const getFailedModelsStats = (batchTestResults, currentModels = null) => {
+  // 如果提供了当前模型列表，只统计当前模型中的失败情况
+  const currentModelSet = currentModels ? new Set(currentModels.split(',').map(m => m.trim()).filter(m => m)) : null;
+  
+  // 过滤测试结果：只保留当前模型中的结果
+  const relevantResults = currentModelSet 
+    ? batchTestResults.filter(r => currentModelSet.has(r.model))
+    : batchTestResults;
+  
+  // 优化性能：只遍历一次，先获取所有失败的模型
+  const failedModels = relevantResults.filter(r => !r.success);
+  // 然后从失败模型中过滤出可重试的，避免第二次完整遍历
+  const retryableFailedModels = failedModels.filter(r => r.isRetryable);
+  
+  return {
+    failed: failedModels,
+    retryable: retryableFailedModels,
+    failedCount: failedModels.length,
+    retryableCount: retryableFailedModels.length
+  };
+};
+
+// 辅助函数：处理模型列表数据
+const processModelData = (
+  models,
+  searchKeyword,
+  batchTestResults,
+  isBatchTesting,
+  currentTestingModel,
+  testingModelsSet = null
+) => {
+  if (!models) return [];
+  
+  // 优化性能：将测试结果转换为 Map，查找时间复杂度从 O(N) 降低到 O(1)
+  const testResultsMap = new Map(batchTestResults.map(result => [result.model, result]));
+  
+  return models
+    .split(',')
+    .map(model => model.trim())
+    .filter(model => model && model.toLowerCase().includes(searchKeyword.toLowerCase()))
+    .map((model, index) => {
+      const testResult = testResultsMap.get(model);
+      return {
+        key: model,
+        model: model,
+        testResult: testResult,
+        isSuccess: testResult?.success,
+        isFailed: testResult && !testResult.success,
+        isTesting: isBatchTesting
+         ? currentTestingModel.includes(model)
+         : Boolean(testingModelsSet && testingModelsSet.has(model)),
+        isRetryable: testResult?.isRetryable
+      };
+    });
+};
+
+// 模型测试内容组件
+const ModelTestContent = ({ 
+  channel, 
+  isBatchTesting, 
+  concurrentLimit, 
+  setConcurrentLimit,
+  testAllModels,
+  modelSearchKeyword,
+  setModelSearchKeyword,
+  batchTestResults,
+  retryFailedModels,
+  handleDeleteFailedModels,
+  testProgress,
+  currentTestingModel,
+  testChannel,
+  showSuccess,
+  showError,
+  t 
+}) => {
+  const failedStats = getFailedModelsStats(batchTestResults, channel.models);
+  
+  // 追踪单个模型测试状态
+  const [testingModels, setTestingModels] = React.useState(() => new Set());
+  
+  // 单个模型测试函数
+  const runSingleTest = async (model) => {
+    setTestingModels(prev => {
+      const next = new Set(prev);
+      next.add(model);
+      return next;
+    });
+    try {
+      await testChannel(channel, model);
+    } finally {
+      setTestingModels(prev => {
+        const next = new Set(prev);
+        next.delete(model);
+        return next;
+      });
+    }
+  };
+  
+  // 使用 useMemo 缓存模型数据处理结果
+  const modelData = React.useMemo(() => processModelData(
+    channel.models,
+    modelSearchKeyword,
+    batchTestResults,
+    isBatchTesting,
+    currentTestingModel,
+    testingModels
+  ), [channel.models, modelSearchKeyword, batchTestResults, isBatchTesting, currentTestingModel, testingModels]);
+
+  return (
+    <div>
+      {/* 渠道信息和操作按钮 */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 0',
+        borderBottom: '1px solid var(--semi-color-border)',
+        marginBottom: '16px'
+      }}>
+        <Typography.Title heading={6} style={{ margin: 0 }}>
+          {t('渠道')}: {channel.name}
+        </Typography.Title>
+        
+        {/* 主要操作按钮组 */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center',
+          gap: '12px'
+        }}>
+          {!isBatchTesting && (
+            <>
+              <Typography.Text style={{ fontSize: '14px' }}>
+                {t('并发测试模型数')}:
+              </Typography.Text>
+              <InputNumber
+                value={concurrentLimit}
+                onChange={setConcurrentLimit}
+                min={1}
+                max={10}
+                style={{ width: '80px' }}
+                size='small'
+              />
+            </>
+          )}
+          
+          <Button
+            type='primary'
+            loading={isBatchTesting}
+            onClick={testAllModels}
+            disabled={!channel?.models}
+          >
+            {isBatchTesting ? t('测试中...') : t('测试全部')}
+          </Button>
+        </div>
+      </div>
+
+      {/* 搜索框和操作按钮 */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        marginBottom: '16px',
+        gap: '12px'
+      }}>
+        <Input
+          placeholder={t('搜索模型...')}
+          value={modelSearchKeyword}
+          onChange={(v) => setModelSearchKeyword(v)}
+          prefix={<IconFilter />}
+          showClear
+          style={{ flex: 1 }}
+        />
+        
+        {/* 失败模型处理按钮组 */}
+        {batchTestResults.length > 0 && failedStats.failedCount > 0 && (
+          <div style={{ 
+            display: 'flex',
+            gap: '8px', 
+            alignItems: 'center'
+          }}>
+            {failedStats.retryableCount > 0 && (
+              <Button
+                type='warning'
+                loading={isBatchTesting}
+                onClick={retryFailedModels}
+                disabled={isBatchTesting}
+              >
+                {isBatchTesting ? t('重试中...') : t('重试失败 ({{count}})', { count: failedStats.retryableCount })}
+              </Button>
+            )}
+
+            <Button
+              type='danger'
+              onClick={() => handleDeleteFailedModels(failedStats.failed)}
+            >
+              {t('删除失败 ({{count}})', { count: failedStats.failedCount })}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* 测试进度显示 */}
+      {isBatchTesting && (
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <Typography.Text style={{ fontSize: '14px' }}>
+              {t('进度')}: {testProgress.completed}/{testProgress.total}
+            </Typography.Text>
+            <div style={{
+              flex: 1,
+              height: '6px',
+              backgroundColor: 'var(--semi-color-fill-1)',
+              borderRadius: '3px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                width: `${testProgress.total > 0 ? (testProgress.completed / testProgress.total) * 100 : 0}%`,
+                height: '100%',
+                backgroundColor: 'var(--semi-color-primary)',
+                borderRadius: '3px',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+          </div>
+          {currentTestingModel && (
+            <Typography.Text style={{ 
+              fontSize: '12px',
+              color: 'var(--semi-color-text-1)'
+            }}>
+              {t('正在测试')}: {currentTestingModel.includes(':') ? currentTestingModel.split(':').slice(1).join(':').trim() : currentTestingModel}
+            </Typography.Text>
+          )}
+        </div>
+      )}
+
+      {/* 模型测试表格 */}
+      <Table
+        dataSource={modelData}
+        columns={[
+          {
+            title: t('模型名称'),
+            dataIndex: 'model',
+            key: 'model',
+            width: '40%',
+            render: (text, record) => (
+              <Typography.Text
+                style={{
+                  fontWeight: '500',
+                  color: record.testResult ? 
+                    (record.isSuccess ? 'var(--semi-color-success)' : 'var(--semi-color-danger)') : 
+                    'var(--semi-color-text-0)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+                ellipsis={{ showTooltip: true }}
+              >
+                {text}
+              </Typography.Text>
+            )
+          },
+          {
+            title: t('状态'),
+            key: 'status',
+            width: '20%',
+            render: (_, record) => {
+              if (record.isTesting) {
+                return <Tag color='blue'>{t('测试中')}</Tag>;
+              }
+              if (record.testResult) {
+                return (
+                  <Tag color={record.isSuccess ? 'green' : 'red'}>
+                    {record.isSuccess ? t('成功') : t('失败')}
+                  </Tag>
+                );
+              }
+              return <Tag color='default'>{t('未测试')}</Tag>;
+            }
+          },
+          {
+            title: t('耗时'),
+            key: 'duration',
+            width: '15%',
+            render: (_, record) => {
+              if (record.testResult?.time) {
+                return (
+                  <Typography.Text style={{ color: 'var(--semi-color-text-1)' }}>
+                    {record.testResult.time.toFixed(2)}s
+                  </Typography.Text>
+                );
+              }
+              return '-';
+            }
+          },
+          {
+            title: t('操作'),
+            key: 'actions',
+            width: '25%',
+            render: (_, record) => (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <Button
+                  size='small'
+                  loading={record.isTesting}
+                  onClick={() => runSingleTest(record.model)}
+                >
+                  {record.isTesting ? t('测试中') : t('测试')}
+                </Button>
+                <Button
+                  size='small'
+                  icon={<IconCopy />}
+                  onClick={async () => {
+                    const success = await copy(record.model);
+                    if (success) {
+                      showSuccess(t('模型名称已复制'));
+                    } else {
+                      showError(t('复制失败'));
+                    }
+                  }}
+                />
+              </div>
+            )
+          }
+        ]}
+        pagination={false}
+        size='small'
+        style={{ marginBottom: '25px' }}
+      />
+
+      {/* 显示搜索结果数量 */}
+      {modelSearchKeyword && (
+        <div style={{ marginTop: '16px' }}>
+          <Typography.Text style={{ 
+            display: 'block',
+            fontSize: '14px',
+            textAlign: 'center',
+            color: 'var(--semi-color-text-1)'
+          }}>
+            {t('找到 {{count}} 个模型', { count: modelData.length })}
+          </Typography.Text>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ChannelsTable = () => {
   const { t } = useTranslation();
@@ -719,6 +1066,11 @@ const ChannelsTable = () => {
   const [searchGroup, setSearchGroup] = useState('');
   const [searchModel, setSearchModel] = useState('');
   const [searching, setSearching] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState([]); // 新增：类型多选
+  const [selectedStatuses, setSelectedStatuses] = useState([]); // 新增：状态多选
+  const [selectedTags, setSelectedTags] = useState([]); // 新增：标签多选
+  const [tagOptions, setTagOptions] = useState([]); // 新增：标签选项
+
   const [updatingBalance, setUpdatingBalance] = useState(false);
   const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
   const [showPrompt, setShowPrompt] = useState(
@@ -747,6 +1099,17 @@ const ChannelsTable = () => {
   const [showModelTestModal, setShowModelTestModal] = useState(false);
   const [currentTestChannel, setCurrentTestChannel] = useState(null);
   const [modelSearchKeyword, setModelSearchKeyword] = useState('');
+  // 测试结果缓存
+  const [testResultsCache, setTestResultsCache] = useState(() => Object.create(null));
+  // 批量测试相关状态
+  const [isBatchTesting, setIsBatchTesting] = useState(false);
+  const [batchTestResults, setBatchTestResults] = useState([]);
+  const [currentTestingModel, setCurrentTestingModel] = useState('');
+  const [testProgress, setTestProgress] = useState({ completed: 0, total: 0 });
+  const [concurrentLimit, setConcurrentLimit] = useState(3); // 默认并发数
+  const [batchTestDelay, setBatchTestDelay] = useState(200); // 批次间延迟(ms)
+  // 批量测试控制
+  const [batchTestAbortController, setBatchTestAbortController] = useState(null);
 
   const removeRecord = (record) => {
     let newDataSource = [...channels];
@@ -775,7 +1138,8 @@ const ChannelsTable = () => {
     let channelDates = [];
     let channelTags = {};
     for (let i = 0; i < channels.length; i++) {
-      channels[i].key = '' + channels[i].id;
+      // 为React Table设置key属性，同时保留原始的key字段（API密钥）
+      channels[i].rowKey = '' + channels[i].id;
       if (!enableTagMode) {
         channelDates.push(channels[i]);
       } else {
@@ -787,7 +1151,8 @@ const ChannelsTable = () => {
           // not found, create a new tag
           channelTags[tag] = 1;
           tagChannelDates = {
-            key: tag,
+            rowKey: tag,  // React Table的key
+            key: tag,     // 标签名
             id: tag,
             tag: tag,
             name: '标签：' + tag,
@@ -839,7 +1204,7 @@ const ChannelsTable = () => {
         tagChannelDates.response_time = tagChannelDates.response_time / 2;
       }
     }
-    // data.key = '' + data.id
+    // 为React Table设置rowKey属性
     setChannels(channelDates);
     if (channelDates.length >= pageSize) {
       setChannelCount(channelDates.length + pageSize);
@@ -894,7 +1259,7 @@ const ChannelsTable = () => {
       showError(t('渠道复制失败: ') + error.message);
     }
   };
- 
+
    const refresh = async () => {
     if (searchKeyword === '' && searchGroup === '' && searchModel === '') {
       await loadChannels(activePage - 1, pageSize, idSort, enableTagMode);
@@ -907,7 +1272,7 @@ const ChannelsTable = () => {
       );
     }
   };
- 
+
    useEffect(() => {
     // console.log('default effect')
     const localIdSort = localStorage.getItem('id-sort') === 'true';
@@ -922,7 +1287,107 @@ const ChannelsTable = () => {
       });
     fetchGroups().then();
     loadChannelModels().then();
+    // 加载测试结果缓存
+    loadTestResultsCache();
   }, []);
+
+  // 监听模态框可见性变化，加载缓存的测试结果
+  useEffect(() => {
+    if (showModelTestModal && currentTestChannel) {
+      const cachedResults = getCachedTestResults(currentTestChannel.id);
+      if (cachedResults) {
+        setBatchTestResults(cachedResults);
+        setTestProgress({ 
+          completed: cachedResults.length, 
+          total: currentTestChannel.models?.split(',').filter(m => m.trim()).length || 0 
+        });
+      }
+    }
+  }, [showModelTestModal, currentTestChannel]);
+
+  // 加载测试结果缓存
+  const loadTestResultsCache = () => {
+    try {
+      const cached = localStorage.getItem('channel-test-results-cache');
+      if (cached) {
+        const parsedCache = JSON.parse(cached);
+        // 清理过期的缓存（超过24小时）
+        const now = Date.now();
+        const validCache = Object.create(null);
+        
+        Object.keys(parsedCache).forEach(channelId => {
+          // 验证channelId是安全的字符串，防止原型污染
+          if (channelId === '__proto__' || 
+              channelId === 'constructor' || 
+              channelId === 'prototype') {
+            return;
+          }
+          
+          const channelCache = parsedCache[channelId];
+          // 验证channelCache是对象且timestamp是有限数字
+          if (channelCache && 
+              typeof channelCache === 'object' &&
+              channelCache !== null &&
+              typeof channelCache.timestamp === 'number' &&
+              Number.isFinite(channelCache.timestamp) &&
+              (now - channelCache.timestamp) < 24 * 60 * 60 * 1000) {
+            validCache[channelId] = channelCache;
+          }
+        });
+        
+        setTestResultsCache(validCache);
+        // 更新localStorage中的有效缓存
+        if (Object.keys(validCache).length !== Object.keys(parsedCache).length) {
+          localStorage.setItem('channel-test-results-cache', JSON.stringify(validCache));
+        }
+      }
+    } catch (e) {
+      console.error('加载测试结果缓存失败:', e);
+      localStorage.removeItem('channel-test-results-cache');
+    }
+  };
+
+  // 保存测试结果缓存
+  const saveTestResultsCache = (channelId, results) => {
+    try {
+      // 将channelId转换为字符串并验证安全性，防止原型污染
+      const id = String(channelId);
+      if (id === '__proto__' || 
+          id === 'constructor' || 
+          id === 'prototype') {
+        console.warn('无效的channelId，跳过缓存保存:', channelId);
+        return;
+      }
+      
+      const newCache = Object.assign(Object.create(null), testResultsCache, {
+        [id]: {
+          results: results,
+          timestamp: Date.now()
+        }
+      });
+      setTestResultsCache(newCache);
+      localStorage.setItem('channel-test-results-cache', JSON.stringify(newCache));
+    } catch (e) {
+      console.error('保存测试结果缓存失败:', e);
+    }
+  };
+
+  // 获取缓存的测试结果
+  const getCachedTestResults = (channelId) => {
+    // 将channelId转换为字符串并验证安全性，防止原型污染
+    const id = String(channelId);
+    if (id === '__proto__' || 
+        id === 'constructor' || 
+        id === 'prototype') {
+      return null;
+    }
+    
+    const channelCache = testResultsCache[id];
+    if (channelCache && (Date.now() - channelCache.timestamp) < 24 * 60 * 60 * 1000) {
+      return channelCache.results;
+    }
+    return null;
+  };
 
   const manageChannel = async (id, action, record, value) => {
     let data = { id };
@@ -1006,21 +1471,48 @@ const ChannelsTable = () => {
     }
   };
 
+  // 支持传入覆盖的类型/状态/标签参数，避免因setState异步导致筛选失效
   const searchChannels = async (
     searchKeyword,
     searchGroup,
     searchModel,
     enableTagMode,
+    typesOverride = null,
+    statusesOverride = null,
+    tagsOverride = null,
   ) => {
-    if (searchKeyword === '' && searchGroup === '' && searchModel === '') {
+    const nextTypes = typesOverride !== null ? typesOverride : selectedTypes;
+    const nextStatuses = statusesOverride !== null ? statusesOverride : selectedStatuses;
+    const nextTags = tagsOverride !== null ? tagsOverride : selectedTags;
+
+    const noBasic = searchKeyword === '' && searchGroup === '' && searchModel === '';
+    const noAdvanced = (!nextTypes || nextTypes.length === 0) && (!nextStatuses || nextStatuses.length === 0) && (!nextTags || nextTags.length === 0);
+    if (noBasic && noAdvanced) {
       await loadChannels(activePage - 1, pageSize, idSort, enableTagMode);
-      // setActivePage(1);
       return;
     }
     setSearching(true);
-    const res = await API.get(
-      `/api/channel/search?keyword=${searchKeyword}&group=${searchGroup}&model=${searchModel}&id_sort=${idSort}&tag_mode=${enableTagMode}`,
-    );
+    const params = new URLSearchParams();
+    
+    // 添加基础搜索参数
+    params.append('keyword', searchKeyword);
+    params.append('group', searchGroup);
+    params.append('model', searchModel);
+    params.append('id_sort', String(idSort));
+    params.append('tag_mode', String(enableTagMode));
+    
+    // 条件添加数组参数
+    if (nextTypes && nextTypes.length > 0) {
+      params.append('types', nextTypes.map(Number).join(','));
+    }
+    if (nextStatuses && nextStatuses.length > 0) {
+      params.append('statuses', nextStatuses.map(Number).join(','));
+    }
+    if (nextTags && nextTags.length > 0) {
+      params.append('tags', nextTags.join(','));
+    }
+    
+    const res = await API.get(`/api/channel/search?${params.toString()}`);
     const { success, message, data } = res.data;
     if (success) {
       setChannelFormat(data, enableTagMode);
@@ -1059,23 +1551,409 @@ const ChannelsTable = () => {
     }
   };
 
+  // 辅助函数：更新测试结果到状态
+  const updateTestResult = (model, result) => {
+    setBatchTestResults(prevResults => {
+      const existingIndex = prevResults.findIndex(r => r.model === model);
+      if (existingIndex >= 0) {
+        const newResults = [...prevResults];
+        newResults[existingIndex] = result;
+        return newResults;
+      } else {
+        return [...prevResults, result];
+      }
+    });
+  };
+
+  // 辅助函数：创建测试结果对象
+  const createTestResult = (model, success, message, time = null, isRetryable = true) => ({
+    model,
+    success,
+    message,
+    time,
+    retryCount: 0,
+    isRetryable: success ? false : isRetryable
+  });
+
+  // 辅助函数：处理测试成功
+  const handleTestSuccess = (record, model, time) => {
+    // 更新渠道属性
+    updateChannelProperty(record.id, (channel) => {
+      channel.response_time = time * 1000;
+      channel.test_time = Date.now() / 1000;
+    });
+
+    // 更新模态框中的测试结果
+    if (shouldUpdateModalResults(record.id)) {
+      const result = createTestResult(
+        model, 
+        true, 
+        t('测试成功，耗时 {{time}} 秒', { time: time.toFixed(2) }), 
+        time
+      );
+      updateTestResult(model, result);
+    }
+
+    showInfo(
+      t('通道 {{name}} 测试成功，耗时 {{time}} 秒。', {
+        name: record.name,
+        time: time.toFixed(2)
+      })
+    );
+  };
+
+  // 辅助函数：处理测试失败
+  const handleTestFailure = (record, model, message) => {
+    if (shouldUpdateModalResults(record.id)) {
+      const result = createTestResult(model, false, message);
+      updateTestResult(model, result);
+    }
+    showError(message);
+  };
+
+  // 辅助函数：判断是否需要更新模态框结果
+  const shouldUpdateModalResults = (recordId) => {
+    return showModelTestModal && currentTestChannel && currentTestChannel.id === recordId;
+  };
+
+  // 主要的测试渠道函数
   const testChannel = async (record, model) => {
-    const res = await API.get(`/api/channel/test/${record.id}?model=${model}`);
-    const { success, message, time } = res.data;
-    if (success) {
-      // Also update the channels state to persist the change
-      updateChannelProperty(record.id, (channel) => {
-        channel.response_time = time * 1000;
-        channel.test_time = Date.now() / 1000;
+    try {
+      const res = await API.get(`/api/channel/test/${record.id}?model=${model}`);
+      const { success, message, time } = res.data;
+      
+      if (success) {
+        handleTestSuccess(record, model, time);
+      } else {
+        handleTestFailure(record, model, message);
+      }
+    } catch (error) {
+      handleTestFailure(record, model, error.message || t('测试请求失败'));
+    }
+  };
+
+  // 统一的取消检测函数
+  const isCancellationError = (error) => {
+    return (
+      error.name === 'AbortError' ||
+      error.name === 'CanceledError' ||
+      axios.isCancel(error) ||
+      error.code === 'ERR_CANCELED'
+    );
+  };
+
+  // 单个模型测试函数（用于并发）- 支持重试
+  const testSingleModel = async (model, abortController, maxRetries = 2) => {
+    let lastError = null;
+    
+    for (let retryCount = 0; retryCount <= maxRetries; retryCount++) {
+      try {
+        const res = await API.get(`/api/channel/test/${currentTestChannel.id}?model=${encodeURIComponent(model)}`, {
+          signal: abortController?.signal
+        });
+        const { success, message, time } = res.data;
+
+        const result = {
+          model,
+          success,
+          message: success ? `测试成功，耗时 ${time.toFixed(2)} 秒` : message,
+          time: success ? time : null,
+          retryCount,
+          isRetryable: !success && retryCount < maxRetries
+        };
+
+        if (success) {
+          // 更新渠道状态
+          updateChannelProperty(currentTestChannel.id, (channel) => {
+            channel.response_time = time * 1000;
+            channel.test_time = Date.now() / 1000;
+          });
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error;
+        
+        // 如果是取消请求，立即抛出错误以停止执行
+        if (isCancellationError(error) || abortController?.signal?.aborted) {
+          throw error;
+        }
+
+        // 如果达到最大重试次数，返回失败结果
+        if (retryCount >= maxRetries) {
+          return {
+            model,
+            success: false,
+            message: error.message || '测试失败',
+            time: null,
+            retryCount,
+            isRetryable: true, // 仍然可以手动重试
+            error: error
+          };
+        }
+
+        // 重试前等待一段时间（指数退避）
+        const delay = Math.min(1000 * Math.pow(2, retryCount), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  };
+
+  // 分批并发处理函数
+  const processBatch = async (models, batchSize, abortController) => {
+    const results = [];
+
+    for (let i = 0; i < models.length; i += batchSize) {
+      // 4) 每次迭代都检查取消状态
+      if (abortController?.signal?.aborted) {
+        throw new Error('测试被用户取消');
+      }
+
+      const batch = models.slice(i, i + batchSize);
+      setCurrentTestingModel(`批次 ${Math.floor(i / batchSize) + 1}: ${batch.join(', ')}`);
+
+      // 4) 在await之前再次检查取消状态
+      if (abortController?.signal?.aborted) {
+        throw new Error('测试被用户取消');
+      }
+
+      // 并发执行当前批次
+      const batchPromises = batch.map(model => testSingleModel(model, abortController));
+      const batchResults = await Promise.allSettled(batchPromises);
+
+      // 4) 在await之后检查取消状态
+      if (abortController?.signal?.aborted) {
+        throw new Error('测试被用户取消');
+      }
+
+      // 处理批次结果
+      const processedResults = batchResults.map((result, index) => {
+        if (result.status === 'fulfilled') {
+          return result.value;
+        } else {
+          // 如果是取消错误，直接抛出
+          if (isCancellationError(result.reason) || abortController?.signal?.aborted) {
+            throw result.reason;
+          }
+          return {
+            model: batch[index],
+            success: false,
+            message: result.reason?.message || '测试失败',
+            time: null
+          };
+        }
       });
 
-      showInfo(
-        t('通道 ${name} 测试成功，耗时 ${time.toFixed(2)} 秒。')
-          .replace('${name}', record.name)
-          .replace('${time.toFixed(2)}', time.toFixed(2)),
-      );
-    } else {
-      showError(message);
+      results.push(...processedResults);
+
+      // 更新进度和结果
+      setTestProgress({ completed: results.length, total: models.length });
+      setBatchTestResults([...results]);
+
+      // 3) 批次间使用可配置的延迟
+      if (i + batchSize < models.length) {
+        // 4) 在延迟期间也要检查取消状态
+        if (abortController?.signal?.aborted) {
+          throw new Error('测试被用户取消');
+        }
+        await new Promise(resolve => setTimeout(resolve, batchTestDelay));
+      }
+    }
+
+    return results;
+  };
+
+  // 重试失败的模型
+  const retryFailedModels = async () => {
+    if (!currentTestChannel || isBatchTesting) {
+      return;
+    }
+
+    const failedModels = batchTestResults.filter(r => !r.success && r.isRetryable);
+    if (failedModels.length === 0) {
+      showInfo(t('没有可重试的失败模型'));
+      return;
+    }
+
+    const controller = new AbortController();
+    setBatchTestAbortController(controller);
+    setIsBatchTesting(true);
+    setCurrentTestingModel('重试失败模型...');
+
+    try {
+      const failedModelNames = failedModels.map(r => r.model);
+      const retryResults = await processBatch(failedModelNames, concurrentLimit, controller);
+      
+      // 更新批量测试结果，合并重试结果
+      const updatedResults = batchTestResults.map(result => {
+        const retryResult = retryResults.find(r => r.model === result.model);
+        return retryResult || result;
+      });
+      
+      setBatchTestResults(updatedResults);
+      
+      const newSuccessCount = retryResults.filter(r => r.success).length;
+      showInfo(t('重试完成：成功 {{successCount}} 个，失败 {{failCount}} 个', { 
+        successCount: newSuccessCount, 
+        failCount: failedModelNames.length - newSuccessCount 
+      }));
+    } catch (error) {
+      if (isCancellationError(error)) {
+        showInfo(t('重试已取消'));
+      } else {
+        showError(t('重试过程中发生错误：') + error.message);
+      }
+    } finally {
+      setIsBatchTesting(false);
+      setCurrentTestingModel('');
+      setBatchTestAbortController(null);
+    }
+  };
+
+  // 处理模型测试弹窗关闭
+  const handleModelTestModalClose = () => {
+    // 停止正在进行的批量测试
+    if (batchTestAbortController) {
+      batchTestAbortController.abort();
+      setBatchTestAbortController(null);
+    }
+    setShowModelTestModal(false);
+    setModelSearchKeyword('');
+    // 重置批量测试相关状态
+    setIsBatchTesting(false);
+    setBatchTestResults([]);
+    setCurrentTestingModel('');
+    setTestProgress({ completed: 0, total: 0 });
+  };
+
+  // 处理删除失败模型
+  const handleDeleteFailedModels = (failedModels) => {
+    const currentModels = currentTestChannel.models.split(',').map(m => m.trim());
+    const failedModelNames = failedModels.map(r => r.model);
+    // 优化性能：将数组转换为 Set，查找时间复杂度从 O(M) 降低到 O(1)
+    const failedModelNamesSet = new Set(failedModelNames);
+    const remainingModels = currentModels.filter(m => !failedModelNamesSet.has(m));
+    
+    if (remainingModels.length === 0) {
+      Modal.warning({
+        title: t('无法删除所有模型'),
+        content: t('删除这些失败的模型会导致渠道没有任何可用模型，这将使渠道无法正常工作。请至少保留一个模型或先添加新的可用模型。'),
+      });
+      return;
+    }
+    
+    Modal.confirm({
+      title: t('批量删除失败模型'),
+      content: (
+        <div>
+          <p>{t('确定要删除所有 {{count}} 个测试失败的模型吗？此操作不可撤销。', { count: failedModels.length })}</p>
+          <p style={{ color: '#52c41a', marginTop: '8px' }}>
+            {t('删除后将保留 {{remaining}} 个正常模型：', { remaining: remainingModels.length })}
+          </p>
+          <div style={{ 
+            maxHeight: '100px', 
+            overflowY: 'auto', 
+            background: 'var(--semi-color-fill-0)', 
+            padding: '8px', 
+            borderRadius: '4px',
+            marginTop: '4px'
+          }}>
+            {remainingModels.map((model, index) => (
+              <div key={index} style={{ fontSize: '12px' }}>{model}</div>
+            ))}
+          </div>
+        </div>
+      ),
+      onOk: async () => {
+        try {
+          const newModels = remainingModels;
+
+          const updateData = {
+            id: currentTestChannel.id,
+            models: newModels.join(','),
+          };
+
+          const res = await API.put('/api/channel/', updateData);
+          if (res.data.success) {
+            updateChannelProperty(currentTestChannel.id, (channel) => {
+              channel.models = newModels.join(',');
+            });
+            setCurrentTestChannel({
+              ...currentTestChannel,
+              models: newModels.join(',')
+            });
+
+            setBatchTestResults(prev => prev.filter(r => !failedModelNamesSet.has(r.model)));
+            await refresh();
+            showSuccess(t('已删除 {{count}} 个失败的模型', { count: failedModels.length }));
+          } else {
+            showError(res.data.message || t('批量删除失败'));
+          }
+        } catch (error) {
+          showError(error.message || t('批量删除失败'));
+        }
+      }
+    });
+  };
+
+  // 批量测试所有模型（并发版本）
+  const testAllModels = async () => {
+    // 1) 验证currentTestChannel存在且具有期望的属性
+    if (!currentTestChannel || 
+        typeof currentTestChannel !== 'object' ||
+        !currentTestChannel.id ||
+        !currentTestChannel.models ||
+        typeof currentTestChannel.models !== 'string') {
+      showError(t('当前测试渠道无效或缺少必需属性'));
+      return;
+    }
+
+    // 修剪空白、去重并过滤空字符串
+    const models = [...new Set(
+      currentTestChannel.models
+        .split(',')
+        .map(model => model.trim())
+        .filter(model => model.length > 0)
+    )];
+    if (models.length === 0) {
+      showError(t('没有可测试的模型'));
+      return;
+    }
+
+    // 创建 AbortController
+    const controller = new AbortController();
+    setBatchTestAbortController(controller);
+
+    setIsBatchTesting(true);
+    setBatchTestResults([]);
+    setCurrentTestingModel('');
+    setTestProgress({ completed: 0, total: models.length });
+
+    // 2) 使用try-catch-finally包装整个异步测试逻辑
+    try {
+      const results = await processBatch(models, concurrentLimit, controller);
+
+      const successCount = results.filter(r => r.success).length;
+      const failCount = results.filter(r => !r.success).length;
+
+      // 保存测试结果到缓存
+      saveTestResultsCache(currentTestChannel.id, results);
+
+      showInfo(t('批量测试完成：成功 {{successCount}} 个，失败 {{failCount}} 个', { 
+        successCount, 
+        failCount 
+      }));
+    } catch (error) {
+      if (isCancellationError(error) || error.message.includes('取消')) {
+        showInfo(t('测试已取消'));
+      } else {
+        showError(t('批量测试过程中发生错误：') + error.message);
+      }
+    } finally {
+      // 3) 确保在finally中重置状态
+      setIsBatchTesting(false);
+      setCurrentTestingModel('');
+      setBatchTestAbortController(null);
     }
   };
 
@@ -1088,7 +1966,7 @@ const ChannelsTable = () => {
         channel.balance_updated_time = Date.now() / 1000;
       });
       showInfo(
-        t('通道 ${name} 余额更新成功！').replace('${name}', record.name),
+        t('通道 {{name}} 余额更新成功！', { name: record.name }),
       );
     } else {
       showError(message);
@@ -1110,7 +1988,7 @@ const ChannelsTable = () => {
     const { success, message, data } = res.data;
     if (success) {
       showSuccess(
-        t('已删除所有禁用渠道，共计 ${data} 个').replace('${data}', data),
+        t('已删除所有禁用渠道，共计 {{count}} 个', { count: data }),
       );
       await refresh();
     } else {
@@ -1143,7 +2021,7 @@ const ChannelsTable = () => {
     const res = await API.post(`/api/channel/batch`, { ids: ids });
     const { success, message, data } = res.data;
     if (success) {
-      showSuccess(t('已删除 ${data} 个通道！').replace('${data}', data));
+      showSuccess(t('已删除 {{count}} 个通道！', { count: data }));
       await refresh();
     } else {
       showError(message);
@@ -1155,7 +2033,7 @@ const ChannelsTable = () => {
     const res = await API.post(`/api/channel/fix`);
     const { success, message, data } = res.data;
     if (success) {
-      showSuccess(t('已修复 ${data} 个通道！').replace('${data}', data));
+      showSuccess(t('已修复 {{count}} 个通道！', { count: data }));
       await refresh();
     } else {
       showError(message);
@@ -1209,7 +2087,7 @@ const ChannelsTable = () => {
     switch (type) {
       case 'priority':
         if (data.priority === undefined || data.priority === '') {
-          showInfo('优先级必须是整数！');
+            showError(t('优先级必须是整数！'));
           return;
         }
         data.priority = parseInt(data.priority);
@@ -1220,7 +2098,7 @@ const ChannelsTable = () => {
           data.weight < 0 ||
           data.weight === ''
         ) {
-          showInfo('权重必须是非负整数！');
+          showInfo(t('权重必须是非负整数！'));
           return;
         }
         data.weight = parseInt(data.weight);
@@ -1230,7 +2108,7 @@ const ChannelsTable = () => {
     try {
       const res = await API.put('/api/channel/tag', data);
       if (res?.data?.success) {
-        showSuccess('更新成功！');
+        showSuccess(t('更新成功！'));
         await refresh();
       }
     } catch (error) {
@@ -1270,7 +2148,7 @@ const ChannelsTable = () => {
     });
     if (res.data.success) {
       showSuccess(
-        t('已为 ${count} 个渠道设置标签！').replace('${count}', res.data.data),
+        t('已为 {{count}} 个渠道设置标签！', { count: res.data.data }),
       );
       await refresh();
       setShowBatchSetTag(false);
@@ -1334,12 +2212,70 @@ const ChannelsTable = () => {
                 { label: t('选择分组'), value: null },
                 ...groupOptions,
               ]}
-              initValue={null}
               onChange={(v) => {
                 setSearchGroup(v);
                 searchChannels(searchKeyword, v, searchModel, enableTagMode);
               }}
             />
+            {/* 新增：类型多选 */}
+            <Form.Select
+              field='types'
+              label={t('渠道类型')}
+              multiple
+              optionList={CHANNEL_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
+              onChange={(v) => {
+                const next = (v || []).map(Number);
+                setSelectedTypes(next);
+                searchChannels(searchKeyword, searchGroup, searchModel, enableTagMode, next, null, null);
+              }}
+            />
+            {/* 新增：状态多选 */}
+            <Form.Select
+              field='statuses'
+              label={t('渠道状态')}
+              multiple
+              optionList={[{label:t('已启用'), value:1}, {label:t('已禁用'), value:2}, {label:t('自动禁用'), value:3}]}
+              onChange={(v) => {
+                const next = (v || []).map(Number);
+                setSelectedStatuses(next);
+                searchChannels(searchKeyword, searchGroup, searchModel, enableTagMode, null, next, null);
+              }}
+            />
+            {/* 新增：标签多选 */}
+            <Form.Select
+              field='tags'
+              label={t('标签')}
+              multiple
+              optionList={tagOptions}
+              filter
+              onFocus={async ()=>{
+                if (tagOptions.length===0) {
+                  const res = await API.get('/api/channel/tags?offset=0&limit=200');
+                  const opts = (res?.data?.data||[]).filter(Boolean).map(t=>({label:t, value:t}));
+                  setTagOptions(opts);
+                }
+              }}
+              onChange={(v) => {
+                const next = (v || []);
+                setSelectedTags(next);
+                searchChannels(searchKeyword, searchGroup, searchModel, enableTagMode, null, null, next);
+              }}
+            />
+            <Button
+              theme='light'
+              type='tertiary'
+              onClick={() => {
+                setSearchKeyword('');
+                setSearchGroup('');
+                setSearchModel('');
+                setSelectedTypes([]);
+                setSelectedStatuses([]);
+                setSelectedTags([]);
+                loadChannels(0, pageSize, idSort, enableTagMode);
+              }}
+            >{t('重置条件')}</Button>
+
+
             <Button
               label={t('查询')}
               type='primary'
@@ -1613,6 +2549,7 @@ const ChannelsTable = () => {
         loading={loading}
         columns={getVisibleColumns()}
         dataSource={pageData}
+        rowKey="rowKey"
         pagination={{
           currentPage: activePage,
           pageSize: pageSize,
@@ -1658,121 +2595,49 @@ const ChannelsTable = () => {
         />
         <div style={{ marginTop: 16 }}>
           <Typography.Text type='secondary'>
-            {t('已选择 ${count} 个渠道').replace(
-              '${count}',
-              selectedChannels.length,
-            )}
+            {t('已选择 {{count}} 个渠道', { count: selectedChannels.length })}
           </Typography.Text>
         </div>
       </Modal>
 
       {/* 模型测试弹窗 */}
       <Modal
-        title={t('选择模型进行测试')}
+        title={t('模型测试')}
         visible={showModelTestModal && currentTestChannel !== null}
-        onCancel={() => {
-          setShowModelTestModal(false);
-          setModelSearchKeyword('');
-        }}
+        onCancel={handleModelTestModalClose}
         footer={null}
         maskClosable={true}
         centered={true}
+        width={800}
       >
-        <div style={{ maxHeight: '500px', overflowY: 'auto', padding: '10px' }}>
+        <div style={{ 
+          maxHeight: '70vh', 
+          overflowY: 'auto'
+        }}>
           {currentTestChannel && (
-            <div>
-              <Typography.Title heading={6} style={{ marginBottom: '16px' }}>
-                {t('渠道')}: {currentTestChannel.name}
-              </Typography.Title>
-
-              {/* 搜索框 */}
-              <Input
-                placeholder={t('搜索模型...')}
-                value={modelSearchKeyword}
-                onChange={(v) => setModelSearchKeyword(v)}
-                style={{ marginBottom: '16px' }}
-                prefix={<IconFilter />}
-                showClear
-              />
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-                  gap: '12px',
-                  marginBottom: '16px',
-                }}
-              >
-                {currentTestChannel.models
-                  .split(',')
-                  .filter((model) =>
-                    model
-                      .toLowerCase()
-                      .includes(modelSearchKeyword.toLowerCase()),
-                  )
-                  .map((model, index) => {
-                    return (
-                      <Space spacing={4} style={{ alignItems: 'stretch' }}>
-                        <Button
-                          theme='light'
-                          type='tertiary'
-                          style={{
-                            height: '100%',
-                            padding: '10px 12px',
-                            textAlign: 'center',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            width: '100%',
-                            borderRadius: '6px',
-                          }}
-                          onClick={() => {
-                            testChannel(currentTestChannel, model);
-                          }}
-                        >
-                          {model}
-                        </Button>
-                        <Button
-                          theme='light'
-                          type='tertiary'
-                          style={{
-                            height: '100%',
-                            padding: '10px 12px',
-                            borderRadius: '6px',
-                          }}
-                          icon={<IconCopy />}
-                          onClick={() => {
-                            navigator.clipboard
-                              .writeText(model)
-                              .then(() => showSuccess(t('模型名称已复制')))
-                              .catch(() => showError(t('复制失败')));
-                          }}
-                        />
-                      </Space>
-                    );
-                  })}
-              </div>
-
-              {/* 显示搜索结果数量 */}
-              {modelSearchKeyword && (
-                <Typography.Text type='secondary' style={{ display: 'block' }}>
-                  {t('找到')}{' '}
-                  {
-                    currentTestChannel.models
-                      .split(',')
-                      .filter((model) =>
-                        model
-                          .toLowerCase()
-                          .includes(modelSearchKeyword.toLowerCase()),
-                      ).length
-                  }{' '}
-                  {t('个模型')}
-                </Typography.Text>
-              )}
-            </div>
+            <ModelTestContent
+              channel={currentTestChannel}
+              isBatchTesting={isBatchTesting}
+              concurrentLimit={concurrentLimit}
+              setConcurrentLimit={setConcurrentLimit}
+              testAllModels={testAllModels}
+              modelSearchKeyword={modelSearchKeyword}
+              setModelSearchKeyword={setModelSearchKeyword}
+              batchTestResults={batchTestResults}
+              retryFailedModels={retryFailedModels}
+              handleDeleteFailedModels={handleDeleteFailedModels}
+              testProgress={testProgress}
+              currentTestingModel={currentTestingModel}
+              testChannel={testChannel}
+              showSuccess={showSuccess}
+              showError={showError}
+              t={t}
+            />
           )}
         </div>
       </Modal>
+
+
     </>
   );
 };

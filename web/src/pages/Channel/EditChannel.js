@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -53,7 +53,8 @@ import {
   IconEyeClosedSolid,
   IconRefresh,
   IconPlusCircle,
-  IconMinusCircle
+  IconMinusCircle,
+  IconCopy
 } from '@douyinfe/semi-icons';
 
 // ModelSelector component for advanced model selection
@@ -237,6 +238,255 @@ const MODEL_MAPPING_EXAMPLE = {
   'gpt-3.5-turbo': 'gpt-3.5-turbo-0125',
 };
 
+// ModelMappingEditor component for visual key-value editing
+const ModelMappingEditor = ({ value, onChange, placeholder }) => {
+  const { t } = useTranslation();
+  const [mappingPairs, setMappingPairs] = useState([]);
+  const [mode, setMode] = useState('visual'); // 'visual' or 'json'
+  const [jsonValue, setJsonValue] = useState('');
+  const [jsonError, setJsonError] = useState('');
+
+  // Parse JSON value to key-value pairs
+  const parseJsonToMappings = (jsonStr) => {
+    if (!jsonStr || jsonStr.trim() === '') {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        return Object.entries(parsed).map(([key, value]) => ({ 
+          id: Date.now() + Math.random(), 
+          key, 
+          value 
+        }));
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  };
+
+  // Convert key-value pairs to JSON string
+  const mappingsToJson = (pairs) => {
+    if (!pairs || pairs.length === 0) {
+      return '';
+    }
+    const obj = {};
+    pairs.forEach(pair => {
+      if (pair.key && pair.key.trim() !== '') {
+        obj[pair.key.trim()] = pair.value || '';
+      }
+    });
+    return Object.keys(obj).length > 0 ? JSON.stringify(obj, null, 2) : '';
+  };
+
+  // Initialize component state from value prop
+  useEffect(() => {
+    const pairs = parseJsonToMappings(value);
+    setMappingPairs(pairs.length > 0 ? pairs : [{ id: Date.now() + Math.random(), key: '', value: '' }]);
+    setJsonValue(value || '');
+    setJsonError('');
+  }, [value]);
+
+  // Add new mapping pair
+  const addMappingPair = () => {
+    const newPairs = [...mappingPairs, { id: Date.now() + Math.random(), key: '', value: '' }];
+    setMappingPairs(newPairs);
+  };
+
+  // Remove mapping pair
+  const removeMappingPair = (index) => {
+    const newPairs = mappingPairs.filter((_, i) => i !== index);
+    const finalPairs = newPairs.length > 0 ? newPairs : [{ id: Date.now() + Math.random(), key: '', value: '' }];
+    setMappingPairs(finalPairs);
+    // Update parent with new JSON
+    const jsonStr = mappingsToJson(finalPairs);
+    onChange(jsonStr);
+  };
+
+  // Update mapping pair
+  const updateMappingPair = (index, field, value) => {
+    const newPairs = [...mappingPairs];
+    newPairs[index] = { ...newPairs[index], [field]: value };
+    setMappingPairs(newPairs);
+    
+    // Update parent with new JSON
+    const jsonStr = mappingsToJson(newPairs);
+    onChange(jsonStr);
+  };
+
+  // Handle mode switch
+  const switchMode = (newMode) => {
+    if (newMode === 'json' && mode === 'visual') {
+      // Switching from visual to JSON
+      const jsonStr = mappingsToJson(mappingPairs);
+      setJsonValue(jsonStr);
+      setJsonError('');
+    } else if (newMode === 'visual' && mode === 'json') {
+      // Switching from JSON to visual
+      try {
+        if (jsonValue.trim() === '') {
+          setMappingPairs([{ id: Date.now() + Math.random(), key: '', value: '' }]);
+          setJsonError('');
+        } else {
+          const parsed = JSON.parse(jsonValue);
+          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+            const pairs = Object.entries(parsed).map(([key, value]) => ({ 
+              id: Date.now() + Math.random(), 
+              key, 
+              value 
+            }));
+            setMappingPairs(pairs.length > 0 ? pairs : [{ id: Date.now() + Math.random(), key: '', value: '' }]);
+            setJsonError('');
+          } else {
+            setJsonError(t('请输入有效的JSON对象格式'));
+            return;
+          }
+        }
+      } catch (error) {
+        setJsonError(t('JSON格式错误: {{message}}', { message: error.message }));
+        return;
+      }
+    }
+    setMode(newMode);
+  };
+
+  // Handle JSON input change
+  const handleJsonChange = (newValue) => {
+    setJsonValue(newValue);
+    
+    // Validate JSON and update parent
+    if (newValue.trim() === '') {
+      setJsonError('');
+      onChange('');
+      return;
+    }
+    
+    try {
+      const parsed = JSON.parse(newValue);
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        setJsonError('');
+        onChange(newValue);
+      } else {
+        setJsonError(t('请输入有效的JSON对象格式'));
+      }
+    } catch (error) {
+      setJsonError(t('JSON格式错误: {{message}}', { message: error.message }));
+    }
+  };
+
+  // Fill template
+  const fillTemplate = () => {
+    const templateJson = JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2);
+    if (mode === 'visual') {
+      const pairs = parseJsonToMappings(templateJson);
+      setMappingPairs(pairs);
+      onChange(templateJson);
+    } else {
+      setJsonValue(templateJson);
+      handleJsonChange(templateJson);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ display: 'flex', marginRight: 16 }}>
+          <Button
+            type={mode === 'visual' ? 'primary' : 'tertiary'}
+            onClick={() => switchMode('visual')}
+            style={{ 
+              borderRadius: '6px 0 0 6px'
+            }}
+          >
+            {t('可视化编辑')}
+          </Button>
+          <Button
+            type={mode === 'json' ? 'primary' : 'tertiary'}
+            onClick={() => switchMode('json')}
+            style={{ 
+              borderRadius: '0 6px 6px 0'
+            }}
+          >
+            {t('JSON编辑')}
+          </Button>
+        </div>
+        <Typography.Text
+          style={{
+            color: 'rgba(var(--semi-blue-5), 1)',
+            userSelect: 'none',
+            cursor: 'pointer',
+          }}
+          onClick={fillTemplate}
+        >
+          {t('填入模板')}
+        </Typography.Text>
+      </div>
+
+      {mode === 'visual' ? (
+        <div>
+          <div style={{ marginBottom: 10 }}>
+            <Typography.Text type="secondary">{placeholder}</Typography.Text>
+          </div>
+          
+          {mappingPairs.map((pair, index) => (
+            <div key={pair.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <Input
+                placeholder={t('目标模型名称')}
+                value={pair.key}
+                onChange={(value) => updateMappingPair(index, 'key', value)}
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Typography.Text style={{ margin: '0 8px' }}>→</Typography.Text>
+              <Input
+                placeholder={t('实际模型名称')}
+                value={pair.value}
+                onChange={(value) => updateMappingPair(index, 'value', value)}
+                style={{ flex: 1, marginRight: 8 }}
+              />
+              <Button
+                type="danger"
+                icon={<IconMinusCircle />}
+                size="small"
+                onClick={() => removeMappingPair(index)}
+                style={{ marginLeft: 4 }}
+              />
+            </div>
+          ))}
+          
+          <Button
+            type="tertiary"
+            icon={<IconPlusCircle />}
+            onClick={addMappingPair}
+            style={{ width: '100%', marginTop: 8 }}
+          >
+            {t('添加映射')}
+          </Button>
+        </div>
+      ) : (
+        <div>
+          <TextArea
+            placeholder={
+              t(
+                '此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，例如：',
+              ) + `\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`
+            }
+            value={jsonValue}
+            onChange={handleJsonChange}
+            autosize
+            autoComplete='new-password'
+          />
+          {jsonError && (
+            <Typography.Text type="danger" style={{ marginTop: 4, display: 'block' }}>
+              {jsonError}
+            </Typography.Text>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const STATUS_CODE_MAPPING_EXAMPLE = {
   400: '500',
 };
@@ -281,6 +531,11 @@ const EditChannel = (props) => {
   const [useKeyListMode, setUseKeyListMode] = useState(false);
   const [disableMultiKeyView, setDisableMultiKeyView] = useState(false);
 
+  // 缓存有效密钥的计算结果
+  const validKeys = useMemo(() => {
+    return keyList.filter(key => key && key.trim());
+  }, [keyList]);
+
   // Ref to store the input element that triggered the switch to list mode
   const singleKeyInputRef = useRef(null);
 
@@ -314,6 +569,8 @@ const EditChannel = (props) => {
   const [batch, setBatch] = useState(false);
   const [autoBan, setAutoBan] = useState(true);
   const [inputs, setInputs] = useState(originInputs);
+  const [originalModelMapping, setOriginalModelMapping] = useState(''); // Save the original model_mapping data
+  const [componentResetKey, setComponentResetKey] = useState(0); // Used to force component reset
   const [originModelOptions, setOriginModelOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
   const [groupOptions, setGroupOptions] = useState([]);
@@ -321,29 +578,149 @@ const EditChannel = (props) => {
   const [fullModels, setFullModels] = useState([]);
   const [customModel, setCustomModel] = useState('');
 
-  // 处理密钥列表的变化
+  // 用于追踪模型的原始名称映射关系 { displayName: originalName }
+  const [modelOriginalMapping, setModelOriginalMapping] = useState({});
+
+  // 解析模型映射配置的工具函数
+  const parseModelMapping = (mappingValue) => {
+    if (!mappingValue || typeof mappingValue !== 'string' || mappingValue.trim() === '') {
+      return null;
+    }
+    
+    try {
+      const mapping = JSON.parse(mappingValue);
+      if (typeof mapping !== 'object' || mapping === null) {
+        return null;
+      }
+      return mapping;
+    } catch (error) {
+      console.warn('模型重定向 JSON 解析失败:', error);
+      return null;
+    }
+  };
+
+  // 获取当前模型列表的工具函数
+  const getCurrentModels = () => {
+    return inputs.models || [];
+  };
+
+  // 更新模型列表的统一方法
+  const updateModelsList = (newModels, newMapping) => {
+    const uniqueModels = Array.from(new Set(newModels.filter(model => model && model.trim())));
+    
+    setInputs((inputs) => ({ ...inputs, models: uniqueModels }));
+    setModelOriginalMapping(newMapping);
+  };
+
+  // 恢复模型到原始名称
+  const restoreModelsToOriginalNames = () => {
+    const currentModels = getCurrentModels();
+    const restoredModels = currentModels.map(model => modelOriginalMapping[model] || model);
+    
+    // 使用数组比较而不是JSON.stringify提高性能
+    const hasChanges = currentModels.length !== restoredModels.length || 
+      currentModels.some((model, index) => model !== restoredModels[index]);
+    
+    if (hasChanges) {
+      updateModelsList(restoredModels, {});
+    }
+  };
+
+  // 应用模型映射的核心逻辑
+  const applyModelMapping = (mapping, currentModels, currentMapping) => {
+    let updatedModels = [...currentModels];
+    let newMapping = { ...currentMapping };
+    let hasChanges = false;
+
+    // 遍历重定向映射
+    Object.entries(mapping).forEach(([key, mappedValue]) => {
+      if (typeof key === 'string' && typeof mappedValue === 'string') {
+        const keyTrimmed = key.trim();
+        const valueTrimmed = mappedValue.trim();
+
+        if (keyTrimmed && valueTrimmed) {
+          // 查找模型配置中是否存在重定向的"值"（原始模型名）
+          const valueIndex = updatedModels.findIndex(model => {
+            return model === valueTrimmed || newMapping[model] === valueTrimmed;
+          });
+
+          if (valueIndex !== -1) {
+            const currentDisplayName = updatedModels[valueIndex];
+            if (currentDisplayName !== keyTrimmed) {
+              // 记录原始映射关系
+              if (!newMapping[keyTrimmed]) {
+                newMapping[keyTrimmed] = newMapping[currentDisplayName] || currentDisplayName;
+              }
+              // 清理旧的映射关系
+              if (newMapping[currentDisplayName]) {
+                delete newMapping[currentDisplayName];
+              }
+              // 更新显示名称为重定向的键
+              updatedModels[valueIndex] = keyTrimmed;
+              hasChanges = true;
+            }
+          }
+        }
+      }
+    });
+
+    // 处理不在映射中的模型，恢复为原始名称
+    const mappingKeys = new Set(Object.keys(mapping).map(key => key.trim()));
+    updatedModels = updatedModels.map(model => {
+      if (!mappingKeys.has(model) && newMapping[model]) {
+        const originalName = newMapping[model];
+        delete newMapping[model];
+        hasChanges = true;
+        return originalName;
+      }
+      return model;
+    });
+
+    return { updatedModels, newMapping, hasChanges };
+  };
+
+  // 实时同步模型重定向到模型配置的函数
+  const syncModelMappingToModels = (mappingValue) => {
+    const mapping = parseModelMapping(mappingValue);
+    
+    if (!mapping) {
+      restoreModelsToOriginalNames();
+      return;
+    }
+
+    const currentModels = getCurrentModels();
+    const { updatedModels, newMapping, hasChanges } = applyModelMapping(
+      mapping, 
+      currentModels, 
+      modelOriginalMapping
+    );
+
+    if (hasChanges) {
+      updateModelsList(updatedModels, newMapping);
+    }
+  };
+
+  // Handle changes to the key list
   const updateKeyListToInput = (newKeyList) => {
     // Filter out empty strings before joining
     const filteredKeyList = newKeyList.filter(key => key.trim().length > 0);
     setKeyList(filteredKeyList);
     const combinedKey = filteredKeyList.join(',');
 
-    // If only one valid key remains and not explicitly disabled multi-key view, switch back to single input mode
-    if (filteredKeyList.length <= 1 && supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
-        setUseKeyListMode(false);
-        // When switching back, ensure the single input shows the remaining key
-        setInputs(inputs => ({ ...inputs, key: combinedKey }));
-        // Optionally reset showKey based on preference for single input
-        // setShowKey(false); // Or keep the last showKey state
+    // If only one valid key remains, switch back to single input mode
+    if (filteredKeyList.length <= 1 && supportsMultiKeyView(inputs.type)) {
+      setUseKeyListMode(false);
+      // When switching back, ensure the single input shows the remaining key
+      setInputs(inputs => ({ ...inputs, key: combinedKey }));
     } else {
-        // Otherwise, update the main inputs.key based on the list
-        setInputs(inputs => ({ ...inputs, key: combinedKey }));
+      // Otherwise, update the main inputs.key based on the list
+      setInputs(inputs => ({ ...inputs, key: combinedKey }));
     }
   };
 
   // Add a new key input box
   const addKeyInput = (initialValue = '') => {
-     const newKeyList = [...keyList, initialValue];
+    const newKeyList = [...keyList, initialValue];
     setKeyList(newKeyList);
     // Focus on the new input after it's rendered
     setTimeout(() => {
@@ -383,8 +760,15 @@ const EditChannel = (props) => {
       return;
     }
 
-    // Special handling for key input when not in key list mode and not type 41, and multi-key view is not disabled
-    if (name === 'key' && !useKeyListMode && inputs.type !== 41 && supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
+    // 处理模型重定向变更时自动同步模型配置（实时同步）
+    if (name === 'model_mapping') {
+      setInputs((inputs) => ({ ...inputs, [name]: value }));
+      syncModelMappingToModels(value);
+      return;
+    }
+
+    // Special handling for key input when not in key list mode and not type 41
+    if (name === 'key' && !useKeyListMode && inputs.type !== 41 && supportsMultiKeyView(inputs.type)) {
       // Check if the new value contains comma or newline
       if (value.includes(',') || value.includes('\n')) {
         // Switch to list mode
@@ -397,22 +781,21 @@ const EditChannel = (props) => {
           .map(k => k.trim())
           .filter(k => k.length > 0);
 
-         // If there are keys, set the list and focus the first input
-         if (keys.length > 0) {
-            setKeyList(keys);
-             // Focus the first input after switching to list mode
-             setTimeout(() => {
-               const inputs = document.querySelectorAll('.key-input-item input');
-               if (inputs.length > 0) {
-                 inputs[0].focus();
-               }
-            }, 0);
-         } else {
-             // If splitting resulted in no keys, stay in single mode but update input value
-             setInputs((inputs) => ({ ...inputs, [name]: value }));
-             setUseKeyListMode(false); // Ensure we don't switch to list mode with empty list
-         }
-
+        // If there are keys, set the list and focus the first input
+        if (keys.length > 0) {
+          setKeyList(keys);
+          // Focus the first input after switching to list mode
+          setTimeout(() => {
+            const inputs = document.querySelectorAll('.key-input-item input');
+            if (inputs.length > 0) {
+              inputs[0].focus();
+            }
+          }, 0);
+        } else {
+          // If splitting resulted in no keys, stay in single mode but update input value
+          setInputs((inputs) => ({ ...inputs, [name]: value }));
+          setUseKeyListMode(false); // Ensure we don't switch to list mode with empty list
+        }
 
         // The main inputs.key will be updated by updateKeyListToInput based on the list state
         return; // Prevent updating inputs.key directly here
@@ -422,36 +805,36 @@ const EditChannel = (props) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
 
     if (name === 'type') {
-      // Reset key list mode when type changes, unless it's type 41 or multi-key view is disabled
-      if (value === 41 || !supportsMultiKeyView(value) || disableMultiKeyView) {
-        setUseKeyListMode(false); // Type 41 uses a single textarea or multi-key view disabled
+      // Reset key list mode when type changes, unless it's type 41
+      if (value === 41 || !supportsMultiKeyView(value)) {
+        setUseKeyListMode(false); // Type 41 uses a single textarea or doesn't support multi-key
         setKeyList([]); // Clear keyList if switching to single input mode
-      } else if (inputs.type === 41 && value !== 41 && supportsMultiKeyView(value) && !disableMultiKeyView) {
-         // If switching from type 41 to another type that supports multi-key, check if the key contains commas/newlines
-         if (inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
-            setUseKeyListMode(true);
-            setShowKey(true);
-            const keys = inputs.key
-              .split(/[,\n]/)
-              .map(k => k.trim())
-              .filter(k => k.length > 0);
-            setKeyList(keys);
-         } else {
-            setUseKeyListMode(false);
-            setKeyList([]); // Clear keyList if switching from type 41 to single mode
-         }
-      } else if (value !== 41 && inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n')) && supportsMultiKeyView(value) && !disableMultiKeyView) {
-           // If changing type between non-41 types that support multi-key, and key already contains multi-keys
-           setUseKeyListMode(true);
-           setShowKey(true);
-            const keys = inputs.key
-              .split(/[,\n]/)
-              .map(k => k.trim())
-              .filter(k => k.length > 0);
-            setKeyList(keys);
+      } else if (inputs.type === 41 && value !== 41 && supportsMultiKeyView(value)) {
+        // If switching from type 41 to another type that supports multi-key, check if the key contains commas/newlines
+        if (inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
+          setUseKeyListMode(true);
+          setShowKey(true);
+          const keys = inputs.key
+            .split(/[,\n]/)
+            .map(k => k.trim())
+            .filter(k => k.length > 0);
+          setKeyList(keys);
+        } else {
+          setUseKeyListMode(false);
+          setKeyList([]); // Clear keyList if switching from type 41 to single mode
+        }
+      } else if (value !== 41 && inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n')) && supportsMultiKeyView(value)) {
+        // If changing type between non-41 types that support multi-key, and key already contains multi-keys
+        setUseKeyListMode(true);
+        setShowKey(true);
+        const keys = inputs.key
+          .split(/[,\n]/)
+          .map(k => k.trim())
+          .filter(k => k.length > 0);
+        setKeyList(keys);
       } else {
-         setUseKeyListMode(false);
-         setKeyList([]); // Clear keyList if switching to single mode
+        setUseKeyListMode(false);
+        setKeyList([]); // Clear keyList if switching to single mode
       }
 
 
@@ -530,57 +913,74 @@ const EditChannel = (props) => {
       }
       if (data.setting !== '' && data.setting !== null) { // Handle null setting
         try { // Add try-catch in case it's not valid JSON
-           data.setting = JSON.stringify(
-             JSON.parse(data.setting),
-             null,
-             2,
-           );
+          data.setting = JSON.stringify(
+            JSON.parse(data.setting),
+            null,
+            2,
+          );
         } catch (e) {
-           console.error("Failed to parse channel setting:", data.setting, e);
-           data.setting = data.setting; // Keep as is if invalid JSON
+          console.error("Failed to parse channel setting:", data.setting, e);
+          data.setting = data.setting; // Keep as is if invalid JSON
         }
       } else {
-          data.setting = ''; // Ensure it's an empty string if null
+        data.setting = ''; // Ensure it's an empty string if null
       }
-       if (data.param_override !== '' && data.param_override !== null) { // Handle null param_override
-         try { // Add try-catch in case it's not valid JSON
-            data.param_override = JSON.stringify(
-              JSON.parse(data.param_override),
-              null,
-              2,
-            );
-         } catch (e) {
-            console.error("Failed to parse channel param_override:", data.param_override, e);
-            data.param_override = data.param_override; // Keep as is if invalid JSON
-         }
+      if (data.param_override !== '' && data.param_override !== null) { // Handle null param_override
+        try { // Add try-catch in case it's not valid JSON
+          data.param_override = JSON.stringify(
+            JSON.parse(data.param_override),
+            null,
+            2,
+          );
+        } catch (e) {
+          console.error("Failed to parse channel param_override:", data.param_override, e);
+          data.param_override = data.param_override; // Keep as is if invalid JSON
+        }
       } else {
-          data.param_override = ''; // Ensure it's an empty string if null
+        data.param_override = ''; // Ensure it's an empty string if null
       }
 
       if (data.system_prompt !== '' && data.system_prompt !== null) { // Handle null system_prompt
         // Keep as is since it's already a string, no need to parse JSON
       } else {
-          data.system_prompt = ''; // Ensure it's an empty string if null
+        data.system_prompt = ''; // Ensure it's an empty string if null
       }
 
 
-      // 处理密钥
+      // Handle the key
       if (data.key && supportsMultiKeyView(data.type)) {
-         const keys = data.key.split(',').map(k => k.trim()).filter(k => k.length > 0);
-         if (keys.length > 1) {
-           setUseKeyListMode(true);
-           setShowKey(true); // Ensure showKey is true for list mode
-           setKeyList(keys);
-         } else {
-           setUseKeyListMode(false);
-           setKeyList([]); // Clear keyList if not in list mode
-         }
+        const keys = data.key.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        if (keys.length > 1) {
+          setUseKeyListMode(true);
+          setShowKey(true); // Ensure showKey is true for list mode
+          setKeyList(keys);
+        } else {
+          setUseKeyListMode(false);
+          setKeyList([]); // Clear keyList if not in list mode
+        }
       } else {
         setUseKeyListMode(false);
         setKeyList([]);
       }
-       setInitialKey(data.key); // Store initial key for single input mode placeholder
+      setInitialKey(data.key); // Store initial key for single input mode placeholder
 
+      // Save the original model_mapping data
+      setOriginalModelMapping(data.model_mapping);
+
+      // 初始化模型原始映射关系
+      const mapping = parseModelMapping(data.model_mapping);
+      if (mapping) {
+        const initialMapping = {};
+        // 根据当前的模型映射和模型列表，建立原始映射关系
+        Object.entries(mapping).forEach(([key, value]) => {
+          if (data.models.includes(key)) {
+            initialMapping[key] = value;
+          }
+        });
+        setModelOriginalMapping(initialMapping);
+      } else {
+        setModelOriginalMapping({});
+      }
 
       setInputs(data);
       if (data.auto_ban === 0) {
@@ -613,7 +1013,8 @@ const EditChannel = (props) => {
           .map((model) => model.id),
       );
     } catch (error) {
-      showError(error.message);
+      console.error('Failed to parse model mapping JSON:', jsonStr, error);
+      return [];
     }
   };
 
@@ -651,31 +1052,45 @@ const EditChannel = (props) => {
     fetchModels().then();
     fetchGroups().then();
     if (isEdit) {
-      loadChannel().then(() => { });
+      loadChannel().then(() => {
+        // Update the reset key after data loading is complete to force component reset
+        setComponentResetKey(prev => prev + 1);
+      });
     } else {
       setInputs(originInputs);
+      setOriginalModelMapping(''); // Initialize as an empty string
+      // 重置模型原始映射关系
+      setModelOriginalMapping({});
       let localModels = getChannelModels(originInputs.type); // Use originInputs.type for initial state
       setBasicModels(localModels);
       setInputs((inputs) => ({ ...inputs, models: localModels }));
+      setComponentResetKey(prev => prev + 1);
     }
   }, [props.editingChannel.id]);
 
-   useEffect(() => {
-       // When switching back from list mode to single mode, ensure the single input is focused
-       if (!useKeyListMode && singleKeyInputRef.current) {
-           singleKeyInputRef.current.focus();
-       }
-   }, [useKeyListMode]);
+  useEffect(() => {
+    // When switching back from list mode to single mode, ensure the single input is focused
+    if (!useKeyListMode && singleKeyInputRef.current) {
+      singleKeyInputRef.current.focus();
+    }
+  }, [useKeyListMode]);
+
+  // 在组件卸载时清理资源
+  useEffect(() => {
+    return () => {
+      setModelOriginalMapping({});
+    };
+  }, []);
 
 
   const submit = async () => {
-     // Update inputs.key from keyList before submitting if in list mode
-     let finalKey = inputs.key;
-     if (useKeyListMode) {
-       // Filter out empty strings before joining
-       const filteredKeyList = keyList.filter(key => key.trim().length > 0);
-       finalKey = filteredKeyList.join(',');
-     }
+    // Update inputs.key from keyList before submitting if in list mode
+    let finalKey = inputs.key;
+    if (useKeyListMode) {
+      // Filter out empty strings before joining
+      const filteredKeyList = keyList.filter(key => key.trim().length > 0);
+      finalKey = filteredKeyList.join(',');
+    }
 
     if (!isEdit && (inputs.name === '' || finalKey === '')) {
       showInfo(t('请填写渠道名称和渠道密钥！'));
@@ -689,21 +1104,21 @@ const EditChannel = (props) => {
       showInfo(t('模型映射必须是合法的 JSON格式！'));
       return;
     }
-     if (inputs.setting !== '' && !verifyJSON(inputs.setting)) {
+    if (inputs.setting !== '' && !verifyJSON(inputs.setting)) {
       showInfo(t('渠道额外设置必须是合法的 JSON 格式！'));
       return;
     }
-     if (inputs.param_override !== '' && !verifyJSON(inputs.param_override)) {
+    if (inputs.param_override !== '' && !verifyJSON(inputs.param_override)) {
       showInfo(t('参数覆盖必须是合法的 JSON 格式！'));
       return;
     }
-     if (inputs.other !== '' && inputs.type === 41) {
-        // For type 41, check if it's JSON only if it starts with {
-        if (inputs.other.trim().startsWith('{') && !verifyJSON(inputs.other)) {
-             showInfo(t('部署地区必须是合法的 JSON 格式或纯文本！'));
-             return;
-        }
-     }
+    if (inputs.other !== '' && inputs.type === 41) {
+      // For type 41, check if it's JSON only if it starts with {
+      if (inputs.other.trim().startsWith('{') && !verifyJSON(inputs.other)) {
+        showInfo(t('部署地区必须是合法的 JSON 格式或纯文本！'));
+        return;
+      }
+    }
 
 
     let localInputs = { ...inputs };
@@ -731,17 +1146,17 @@ const EditChannel = (props) => {
     localInputs.group = localInputs.groups.join(',');
 
     // Ensure other is string for type 41 if it was JSON
-     if (localInputs.type === 41 && typeof localInputs.other !== 'string') {
-        localInputs.other = JSON.stringify(localInputs.other);
-     }
+    if (localInputs.type === 41 && typeof localInputs.other !== 'string') {
+      localInputs.other = JSON.stringify(localInputs.other);
+    }
 
-     // Ensure setting and param_override are strings if they are objects (parsed from JSON)
-     if (typeof localInputs.setting !== 'string') {
-        localInputs.setting = JSON.stringify(localInputs.setting);
-     }
-     if (typeof localInputs.param_override !== 'string') {
-        localInputs.param_override = JSON.stringify(localInputs.param_override);
-     }
+    // Ensure setting and param_override are strings if they are objects (parsed from JSON)
+    if (typeof localInputs.setting !== 'string') {
+      localInputs.setting = JSON.stringify(localInputs.setting);
+    }
+    if (typeof localInputs.param_override !== 'string') {
+      localInputs.param_override = JSON.stringify(localInputs.param_override);
+    }
 
 
     if (isEdit) {
@@ -800,113 +1215,128 @@ const EditChannel = (props) => {
     }
 
     if (addedCount > 0) {
-       setModelOptions(localModelOptions);
-       handleInputChange('models', localModels);
-       setCustomModel(''); // Clear input only if something was added
+      setModelOptions(localModelOptions);
+      handleInputChange('models', localModels);
+      setCustomModel(''); // Clear input only if something was added
     }
   };
 
-   // Handle key down event for key list input
-   const handleKeyInputKeyDown = (e, index) => {
-     if (e.key === 'Enter' || e.key === ',') {
-       e.preventDefault(); // Prevent default newline or comma
-       const currentValue = keyList[index].trim();
-       if (currentValue.length > 0) {
-         // If the current input has content, ensure it's in the list (handled by updateKeyAtIndex)
-         // Then add a new empty input below
-         addKeyInput();
-       } else if (e.key === 'Enter') {
-          // If Enter is pressed on an empty input, just add a new empty one
-           addKeyInput();
-       }
-       // If it's a comma on an empty input, do nothing (just prevent default)
-     } else if (e.key === 'Backspace' && keyList[index] === '' && keyList.length > 1 && index > 0) {
-        // If backspace is pressed on an empty input and there are other inputs before it
-         e.preventDefault(); // Prevent default backspace
-         const prevInput = document.querySelectorAll('.key-input-item input')[index - 1];
-         removeKeyInput(index);
-         // Focus on the previous input
-         if (prevInput) {
-             prevInput.focus();
-         }
-     }
-   };
-
-   // Handle paste event for key list input
-   const handleKeyInputPaste = (e, index) => {
-      const clipboardData = e.clipboardData || window.clipboardData;
-      const pastedData = clipboardData.getData('Text');
-
-      // Check if pasted data contains newline or comma
-      if (pastedData.includes('\n') || pastedData.includes(',')) {
-         e.preventDefault(); // Prevent default paste behavior
-
-         // Get current value in the input where pasting
-         const currentValue = keyList[index];
-
-         // Process the pasted data and the current value
-         const combinedValue = currentValue + pastedData;
-         const newKeys = combinedValue
-           .split(/[,\n]/) // Split by comma or newline
-           .map(k => k.trim())
-           .filter(k => k.length > 0); // Filter out empty strings
-
-         // Update the key list state
-         const newKeyList = [...keyList];
-         // Remove the original key at the current index
-         newKeyList.splice(index, 1);
-         // Insert the new keys at the current index
-         newKeyList.splice(index, 0, ...newKeys);
-
-         updateKeyListToInput(newKeyList); // Update state and sync with inputs.key
-
-          // Focus on the last inserted input if new ones were added
-         if (newKeys.length > 0) {
-             setTimeout(() => {
-                const inputs = document.querySelectorAll('.key-input-item input');
-                 if (inputs.length >= index + newKeys.length) {
-                    inputs[index + newKeys.length - 1].focus();
-                 }
-             }, 0);
-         } else {
-             // If pasted content resulted in no valid keys, focus on the previous input or the first if at index 0
-             setTimeout(() => {
-                 const inputs = document.querySelectorAll('.key-input-item input');
-                 if (inputs.length > 0) {
-                     const targetIndex = index > 0 ? index - 1 : 0;
-                     if (inputs[targetIndex]) {
-                         inputs[targetIndex].focus();
-                     }
-                 }
-             }, 0);
-         }
+  // Handle key down event for key list input
+  const handleKeyInputKeyDown = (e, index) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault(); // Prevent default newline or comma
+      const currentValue = keyList[index].trim();
+      if (currentValue.length > 0) {
+        // If the current input has content, ensure it's in the list (handled by updateKeyAtIndex)
+        // Then add a new empty input below
+        addKeyInput();
+      } else if (e.key === 'Enter') {
+        // If Enter is pressed on an empty input, just add a new empty one
+        addKeyInput();
       }
-      // If no newline or comma, allow default paste
-   };
+      // If it's a comma on an empty input, do nothing (just prevent default)
+    } else if (e.key === 'Backspace' && keyList[index] === '' && keyList.length > 1 && index > 0) {
+      // If backspace is pressed on an empty input and there are other inputs before it
+      e.preventDefault(); // Prevent default backspace
+      const prevInput = document.querySelectorAll('.key-input-item input')[index - 1];
+      removeKeyInput(index);
+      // Focus on the previous input
+      if (prevInput) {
+        prevInput.focus();
+      }
+    }
+  };
 
-    // Toggle multi-key view disable state
-    const toggleDisableMultiKeyView = () => {
-        setDisableMultiKeyView(prev => !prev);
-        // When disabling multi-key view, force single input mode
-        if (!disableMultiKeyView) {
-            setUseKeyListMode(false);
-            // When switching to single mode, combine existing keys back into one string
-            const combinedKey = keyList.join(',');
-            setInputs(inputs => ({ ...inputs, key: combinedKey }));
-            setKeyList([]); // Clear key list state
-        } else {
-            // When enabling multi-key view (if applicable and key has multiple entries)
-            if (supportsMultiKeyView(inputs.type) && inputs.key && (inputs.key.includes(',') || inputs.key.includes('\n'))) {
-                 setUseKeyListMode(true);
-                 setShowKey(true);
-                 const keys = inputs.key
-                   .split(/[,\n]/)
-                   .map(k => k.trim())
-                   .filter(k => k.length > 0);
-                 setKeyList(keys);
+  // Handle paste event for key list input
+  const handleKeyInputPaste = (e, index) => {
+    const clipboardData = e.clipboardData || window.clipboardData;
+    const pastedData = clipboardData.getData('Text');
+
+    // Check if pasted data contains newline or comma
+    if (pastedData.includes('\n') || pastedData.includes(',')) {
+      e.preventDefault(); // Prevent default paste behavior
+
+      // Get current value in the input where pasting
+      const currentValue = keyList[index];
+
+      // Process the pasted data and the current value
+      const combinedValue = currentValue + pastedData;
+      const newKeys = combinedValue
+        .split(/[,\n]/) // Split by comma or newline
+        .map(k => k.trim())
+        .filter(k => k.length > 0); // Filter out empty strings
+
+      // Update the key list state
+      const newKeyList = [...keyList];
+      // Remove the original key at the current index
+      newKeyList.splice(index, 1);
+      // Insert the new keys at the current index
+      newKeyList.splice(index, 0, ...newKeys);
+
+      updateKeyListToInput(newKeyList); // Update state and sync with inputs.key
+
+      // Focus on the last inserted input if new ones were added
+      if (newKeys.length > 0) {
+        setTimeout(() => {
+          const inputs = document.querySelectorAll('.key-input-item input');
+          if (inputs.length >= index + newKeys.length) {
+            inputs[index + newKeys.length - 1].focus();
+          }
+        }, 0);
+      } else {
+        // If pasted content resulted in no valid keys, focus on the previous input or the first if at index 0
+        setTimeout(() => {
+          const inputs = document.querySelectorAll('.key-input-item input');
+          if (inputs.length > 0) {
+            const targetIndex = index > 0 ? index - 1 : 0;
+            if (inputs[targetIndex]) {
+              inputs[targetIndex].focus();
             }
-        }
-    };
+          }
+        }, 0);
+      }
+    }
+    // If no newline or comma, allow default paste
+  };
+
+  // Toggle multi-key view disable state
+  const switchToSingleKeyMode = () => {
+    setUseKeyListMode(false);
+    // When switching back to single mode, combine existing keys back into one string
+    const combinedKey = keyList.join(',');
+    setInputs(inputs => ({ ...inputs, key: combinedKey }));
+    setKeyList([]); // Clear key list state
+  };
+
+  // 复制功能
+  const copyToClipboard = async (text, successMessage) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      showSuccess(successMessage || t('已复制到剪贴板'));
+    } catch (error) {
+      console.error('Failed to copy to clipboard:', error);
+      showError(t('复制失败'));
+    }
+  };
+
+  // 复制单个密钥
+  const copyKey = async (key) => {
+    if (!key || !key.trim()) {
+      showWarning(t('密钥为空，无法复制'));
+      return;
+    }
+    await copyToClipboard(key.trim(), t('密钥已复制'));
+  };
+
+  // 复制所有密钥（一行一个）
+  const copyAllKeys = async () => {
+    if (validKeys.length === 0) {
+      showWarning(t('没有有效的密钥可复制'));
+      return;
+    }
+    const allKeysText = validKeys.join('\n');
+    await copyToClipboard(allKeysText, t('已复制全部密钥（{{count}}个）', { count: validKeys.length }));
+  };
 
 
   // 渲染密钥输入组件
@@ -914,96 +1344,183 @@ const EditChannel = (props) => {
     // 多行文本框类型的渠道 (type 41)
     if (inputs.type === 41) {
       return (
-        <TextArea
-          label={t('密钥')}
-          name='key'
-          required
-          placeholder={t(type2secretPrompt(inputs.type))}
-          onChange={(value) => {
-            handleInputChange('key', value);
-          }}
-          value={inputs.key}
-          autoComplete='new-password'
-          autosize={{ minRows: 2 }}
-        />
-      );
-    }
-
-    // 使用列表模式显示多个密钥 (if supported and not disabled)
-    if (useKeyListMode && supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
-      return (
         <div>
-          <div style={{ marginTop: 8, marginBottom: '8px' }}>
-                <Checkbox
-                    checked={disableMultiKeyView}
-                    onChange={toggleDisableMultiKeyView}
-                >
-                    {t('禁用多密钥视图')}
-                </Checkbox>
-            </div>
-          <div style={{ maxHeight: '50vh', overflowY: 'auto' }}>
-          {keyList.map((key, index) => (
-            <div key={index} style={{ display: 'flex', marginBottom: '8px' }} className="key-input-item">
-              <Input
-                style={{ flex: 1 }}
-                value={key}
-                onChange={(value) => updateKeyAtIndex(index, value)}
-                onKeyDown={(e) => handleKeyInputKeyDown(e, index)}
-                 onPaste={(e) => handleKeyInputPaste(e, index)}
-                placeholder={t('请输入密钥')}
-              />
-              <Button
-                icon={<IconMinusCircle />}
-                type="danger"
-                theme="borderless"
-                onClick={() => removeKeyInput(index)}
-                style={{ marginLeft: '8px' }}
-                 disabled={keyList.length <= 1} // Disable remove if only one key left
-              />
-            </div>
-          ))}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 8 }}>
+            <Typography.Text style={{ fontSize: 14, fontWeight: 600 }}>{t('密钥')}：</Typography.Text>
+            <Button
+              icon={<IconCopy />}
+              onClick={() => copyKey(inputs.key)}
+              size="small"
+              theme="borderless"
+              disabled={!inputs.key || !inputs.key.trim()}
+            >
+              {t('复制')}
+            </Button>
           </div>
-          <Button
-            icon={<IconPlusCircle />}
-            onClick={() => addKeyInput()}
-            style={{ marginTop: '8px' }}
-          >
-            {t('添加密钥')}
-          </Button>
-           <Typography.Text type="secondary" style={{ marginLeft: 16 }}>
-            {t('在输入框中输入逗号或回车可自动换行添加')}
-           </Typography.Text>
-            
+          <TextArea
+            name='key'
+            required
+            placeholder={t(type2secretPrompt(inputs.type))}
+            onChange={(value) => {
+              handleInputChange('key', value);
+            }}
+            value={inputs.key}
+            autoComplete='new-password'
+            autosize={{ minRows: 2 }}
+          />
         </div>
       );
     }
 
-    // 默认单行密钥输入 (or if multi-key view is disabled or not supported)
-    return (
-      <>
-      {supportsMultiKeyView(inputs.type) && ( // Only show checkbox if multi-key view is supported
-        <Checkbox
-          checked={disableMultiKeyView}
-          onChange={toggleDisableMultiKeyView}
-          style={{ marginRight: 8, marginBottom: 8, marginTop: 8 }} // Add some spacing
-        >
-           {t('禁用多密钥视图')}
-        </Checkbox>
-      )}
+    // 使用列表模式显示多个密钥
+    if (useKeyListMode && supportsMultiKeyView(inputs.type)) {
+      return (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 8 }}>
+            <Typography.Text style={{ fontSize: 14, fontWeight: 600 }}>{t('密钥')}：</Typography.Text>
+            <Button
+              size="small"
+              theme="solid"
+              onClick={switchToSingleKeyMode}
+            >
+              {t('切换为单密钥模式')}
+            </Button>
+          </div>
+          
+          <div style={{ 
+            maxHeight: '50vh', 
+            overflowY: 'auto',
+            border: '1px solid var(--semi-color-border)',
+            borderRadius: '6px',
+            padding: '12px',
+            backgroundColor: 'var(--semi-color-fill-0)'
+          }}>
+            {keyList.map((key, index) => (
+              <div key={index} style={{ display: 'flex', marginBottom: '5px', alignItems: 'center' }} className="key-input-item">
+                <Typography.Text 
+                  style={{ 
+                    minWidth: '30px', 
+                    textAlign: 'center',
+                    color: 'var(--semi-color-text-2)',
+                    fontSize: 12,
+                    marginRight: 8
+                  }}
+                >
+                  {index + 1}
+                </Typography.Text>
+                <Input
+                  style={{ flex: 1 }}
+                  value={key}
+                  onChange={(value) => updateKeyAtIndex(index, value)}
+                  onKeyDown={(e) => handleKeyInputKeyDown(e, index)}
+                  onPaste={(e) => handleKeyInputPaste(e, index)}
+                  placeholder={t('请输入第 {{index}} 个密钥', { index: index + 1 })}
+                  size="small"
+                />
+                <Button
+                  icon={<IconCopy />}
+                  theme="borderless"
+                  size="small"
+                  onClick={() => copyKey(key)}
+                  style={{ 
+                    marginLeft: '4px',
+                    minWidth: '28px',
+                    opacity: key && key.trim() ? 1 : 0.3
+                  }}
+                  disabled={!key || !key.trim()}
+                />
+                <Button
+                  icon={<IconMinusCircle />}
+                  type="danger"
+                  theme="borderless"
+                  size="small"
+                  onClick={() => removeKeyInput(index)}
+                  style={{ 
+                    marginLeft: '8px',
+                    minWidth: '28px',
+                    opacity: keyList.length <= 1 ? 0.3 : 1
+                  }}
+                  disabled={keyList.length <= 1}
+                />
+              </div>
+            ))}
+          </div>
+          
+          <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Button
+                icon={<IconPlusCircle />}
+                onClick={() => addKeyInput()}
+                size="small"
+                theme="solid"
+              >
+                {t('添加密钥')}
+              </Button>
+              <Button
+                icon={<IconCopy />}
+                onClick={() => copyAllKeys()}
+                size="small"
+                theme="solid"
+                disabled={validKeys.length === 0}
+              >
+                {t('复制全部')}
+              </Button>
+            </div>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {t('总计: {{count}} 个密钥', { count: keyList.length })}
+            </Typography.Text>
+          </div>
+          
+          <Typography.Text type="tertiary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
+            {t('💡 提示: 输入逗号或回车可快速添加新密钥')}
+          </Typography.Text>
+        </div>
+      );
+    }
 
-      <Input
-         ref={singleKeyInputRef} // Attach ref here
-        label={t('密钥')}
-        name='key'
-        required
-        type={showKey ? 'text' : 'password'}
-        placeholder={t(type2secretPrompt(inputs.type))}
-        onChange={(value) => {
-          handleInputChange('key', value);
-        }}
-        onPaste={(e) => {
-          // Handle paste for single input mode to switch to list mode, if supported and not disabled
-          if (supportsMultiKeyView(inputs.type) && !disableMultiKeyView) {
+    // 默认单行密钥输入
+    return (
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10, marginBottom: 8 }}>
+          <Typography.Text style={{ fontSize: 14, fontWeight: 600 }}>{t('密钥')}：</Typography.Text>
+          {supportsMultiKeyView(inputs.type) && (
+            <Button
+              size="small"
+              theme="solid"
+              onClick={() => {
+                // 切换到多密钥模式，保留当前密钥作为第一个
+                const currentKey = inputs.key || '';
+                const keys = currentKey.split(/[\n,]/).map(k => k.trim()).filter(Boolean);
+                const keysToSet = keys.length === 0 ? ['', ''] : [...keys, ''];
+                setKeyList(keysToSet);
+                setUseKeyListMode(true);
+                setShowKey(true);
+                setTimeout(() => {
+                  const keyInputs = document.querySelectorAll('.key-input-item input');
+                  if (keyInputs.length > 0) {
+                    // 聚焦到最后一个（新添加的空）输入框
+                    keyInputs[keyInputs.length - 1].focus();
+                  }
+                }, 0);
+              }}
+            >
+              {t('切换为多密钥模式')}
+            </Button>
+          )}
+        </div>
+        
+        <Input
+          ref={singleKeyInputRef}
+          name='key'
+          required
+          type={showKey ? 'text' : 'password'}
+          placeholder={t(type2secretPrompt(inputs.type))}
+          onChange={(value) => {
+            handleInputChange('key', value);
+          }}
+          onPaste={(e) => {
+            // Handle paste for single input mode to switch to list mode, if supported
+            if (supportsMultiKeyView(inputs.type)) {
               const clipboardData = e.clipboardData || window.clipboardData;
               const pastedData = clipboardData.getData('Text');
 
@@ -1011,73 +1528,81 @@ const EditChannel = (props) => {
               if (pastedData.includes('\n') || pastedData.includes(',')) {
                 e.preventDefault(); // Prevent default paste
 
-                 // Prepend existing key if any
-                 const combinedData = (inputs.key || '') + pastedData;
+                // Prepend existing key if any
+                const combinedData = (inputs.key || '') + pastedData;
 
-                 // Process the pasted data to switch to list mode
+                // Process the pasted data to switch to list mode
                 const keys = combinedData
                   .split(/[,\n]/)
                   .map(k => k.trim())
                   .filter(k => k.length > 0);
 
                 if (keys.length > 0) {
-                    setUseKeyListMode(true);
-                    setShowKey(true);
-                    setKeyList(keys);
-                     // Update the main inputs.key state based on the new list
-                    handleInputChange('key', keys.join(','));
+                  setUseKeyListMode(true);
+                  setShowKey(true);
+                  setKeyList(keys);
+                  // Update the main inputs.key state based on the new list
+                  handleInputChange('key', keys.join(','));
 
-                     // Focus the first input after switching to list mode
-                     setTimeout(() => {
-                       const inputs = document.querySelectorAll('.key-input-item input');
-                       if (inputs.length > 0) {
-                         inputs[0].focus();
-                       }
-                    }, 0);
+                  // Focus the first input after switching to list mode
+                  setTimeout(() => {
+                    const inputs = document.querySelectorAll('.key-input-item input');
+                    if (inputs.length > 0) {
+                      inputs[0].focus();
+                    }
+                  }, 0);
 
                 } else {
-                    // If splitting resulted in no valid keys, just update the input value (which is empty after split)
-                     handleInputChange('key', '');
+                  // If splitting resulted in no valid keys, just update the input value (which is empty after split)
+                  handleInputChange('key', '');
                 }
               }
               // If no newline or comma, allow default paste (handled by onChange)
-          }
-           // If multi-key view not supported or disabled, allow default paste (handled by onChange)
-        }}
-        value={inputs.key}
-        autoComplete='new-password'
-        addonAfter={
-          <Space>
-            
-            <Button
-              theme="borderless"
-              icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
-              onClick={() => setShowKey(!showKey)}
-              style={{ padding: '0 4px' }}
-            />
-          </Space>
-        }
-      />
-      {supportsMultiKeyView(inputs.type) && disableMultiKeyView && (
-        <Button
-          type='danger'
-          theme='borderless'
-          onClick={() => {
-            Modal.confirm({
-              title: t('确认清空密钥'),
-              content: t('您确定要清空密钥输入框的内容吗？'),
-              onOk: () => {
-                handleInputChange('key', '');
-                showSuccess(t('密钥已清空'));
-              },
-            });
+            }
+            // If multi-key view not supported, allow default paste (handled by onChange)
           }}
-          style={{ marginTop: 8 }}
-        >
-          {t('清空')}
-        </Button>
-      )}
-      </>
+          value={inputs.key}
+          autoComplete='new-password'
+          addonAfter={
+            <Space>
+              <Button
+                theme="borderless"
+                icon={<IconCopy />}
+                onClick={() => copyKey(inputs.key)}
+                style={{ padding: '0 4px' }}
+                disabled={!inputs.key || !inputs.key.trim()}
+              />
+              <Button
+                theme="borderless"
+                icon={showKey ? <IconEyeClosedSolid /> : <IconEyeOpened />}
+                onClick={() => setShowKey(!showKey)}
+                style={{ padding: '0 4px' }}
+              />
+            </Space>
+          }
+        />
+        
+        {/* 清空按钮 */}
+        {inputs.key && (
+          <Button
+            type='danger'
+            theme='borderless'
+            onClick={() => {
+              Modal.confirm({
+                title: t('确认清空密钥'),
+                content: t('您确定要清空密钥输入框的内容吗？'),
+                onOk: () => {
+                  handleInputChange('key', '');
+                  showSuccess(t('密钥已清空'));
+                },
+              });
+            }}
+            style={{ marginTop: 8 }}
+          >
+            {t('清空')}
+          </Button>
+        )}
+      </div>
     );
   };
 
@@ -1286,9 +1811,6 @@ const EditChannel = (props) => {
               </Tooltip>
             </>
           )}
-          <div style={{ marginTop: 10 }}>
-            <Typography.Text strong>{t('密钥')}：</Typography.Text>
-          </div>
           {renderKeyInput()}
           {inputs.type === 22 && (
             <>
@@ -1456,6 +1978,35 @@ const EditChannel = (props) => {
             value={inputs.models}
             autoComplete='new-password'
             optionList={modelOptions}
+            renderSelectedItem={(optionNode) => {
+              const modelName = String(optionNode?.value ?? '');
+
+              const handleCopy = async (e) => {
+                e.stopPropagation();
+                try {
+                  await navigator.clipboard.writeText(modelName);
+                  showSuccess(t('已复制：{{name}}', { name: modelName }));
+                } catch (error) {
+                  console.error('Failed to copy to clipboard:', error);
+                  showError(t('复制失败'));
+                }
+              };
+
+              return {
+                isRenderInTag: true,
+                content: (
+                  <span
+                    className="cursor-pointer select-none"
+                    role="button"
+                    tabIndex={0}
+                    title={t('点击复制模型名称')}
+                    onClick={handleCopy}
+                  >
+                    {optionNode.label || modelName}
+                  </span>
+                ),
+              };
+            }}
           />
           <div style={{ lineHeight: '40px', marginBottom: '12px' }}>
             <Space>
@@ -1550,35 +2101,17 @@ const EditChannel = (props) => {
           <div style={{ marginTop: 10 }}>
             <Typography.Text strong>{t('模型重定向')}：</Typography.Text>
           </div>
-          <TextArea
-            placeholder={
-              t(
-                '此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，例如：',
-              ) + `\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`
-            }
-            name='model_mapping'
-            onChange={(value) => {
-              handleInputChange('model_mapping', value);
-            }}
-            autosize
-            value={inputs.model_mapping}
-            autoComplete='new-password'
+          <ModelMappingEditor
+            key={`model-mapping-${componentResetKey}`}
+            value={originalModelMapping || inputs.model_mapping}
+            onChange={(value) => handleInputChange('model_mapping', value)}
+            placeholder={t('此项可选，用于修改请求体中的模型名称')}
           />
-          <Typography.Text
-            style={{
-              color: 'rgba(var(--semi-blue-5), 1)',
-              userSelect: 'none',
-              cursor: 'pointer',
-            }}
-            onClick={() => {
-              handleInputChange(
-                'model_mapping',
-                JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2),
-              );
-            }}
-          >
-            {t('填入模板')}
-          </Typography.Text>
+          <div style={{ marginTop: 8 }}>
+            <Typography.Text type="tertiary" style={{ fontSize: 12 }}>
+              {t('💡 提示：设置重定向后，系统自动将“模型配置”中对应的“值”替换为“键”')}
+            </Typography.Text>
+          </div>
           <div style={{ marginTop: 10 }}>
             <Typography.Text strong>{t('渠道标签')}</Typography.Text>
           </div>
