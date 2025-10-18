@@ -18,6 +18,7 @@ package controller
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,6 +30,7 @@ import (
 	"veloera/middleware"
 	"veloera/model"
 	"veloera/relay"
+	relaycommon "veloera/relay/common"
 	"veloera/relay/constant"
 	relayconstant "veloera/relay/constant"
 	"veloera/relay/helper"
@@ -56,6 +58,8 @@ func relayHandler(c *gin.Context, relayMode int) *dto.OpenAIErrorWithStatusCode 
 		err = relay.EmbeddingHelper(c)
 	case relayconstant.RelayModeResponses:
 		err = relay.ResponsesHelper(c)
+	case relayconstant.RelayModeTokenCount:
+		err = relay.TokenCountHelper(c)
 	default:
 		err = relay.TextHelper(c)
 	}
@@ -155,9 +159,14 @@ func Relay(c *gin.Context) {
 			openaiErr.Error.Message = "当前分组上游负载已饱和，请稍后再试"
 		}
 		openaiErr.Error.Message = common.MessageWithRequestId(openaiErr.Error.Message, requestId)
-		c.JSON(openaiErr.StatusCode, gin.H{
-			"error": openaiErr.Error,
-		})
+		if c.GetString("relay_format") == relaycommon.RelayFormatGemini {
+			geminiErr := service.OpenAIErrorToGeminiResponse(openaiErr)
+			c.JSON(openaiErr.StatusCode, geminiErr)
+		} else {
+			c.JSON(openaiErr.StatusCode, gin.H{
+				"error": openaiErr.Error,
+			})
+		}
 	}
 }
 
@@ -464,6 +473,56 @@ func RelayNotFound(c *gin.Context) {
 	}
 	c.JSON(http.StatusNotFound, gin.H{
 		"error": err,
+	})
+}
+
+func RelayTokenCount(c *gin.Context) {
+	requestId := c.GetString(common.RequestIdKey)
+
+	// Get request body and parse it
+	requestBody, err := common.GetRequestBody(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"type": "error",
+			"error": gin.H{
+				"type":    "invalid_request_error",
+				"message": "Failed to read request body",
+			},
+		})
+		return
+	}
+
+	// Parse Claude request
+	var claudeRequest dto.ClaudeRequest
+	err = json.Unmarshal(requestBody, &claudeRequest)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"type": "error",
+			"error": gin.H{
+				"type":    "invalid_request_error",
+				"message": "Invalid request format",
+			},
+		})
+		return
+	}
+
+	// Count tokens locally without needing channels
+	tokenCount, err := service.CountTokenClaudeRequest(claudeRequest, claudeRequest.Model)
+	if err != nil {
+		common.LogError(c, fmt.Sprintf("Token counting failed: %s", err.Error()))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"type": "error",
+			"error": gin.H{
+				"type":    "internal_server_error",
+				"message": common.MessageWithRequestId("Token counting failed", requestId),
+			},
+		})
+		return
+	}
+
+	// Return token count in Claude API format
+	c.JSON(http.StatusOK, gin.H{
+		"input_tokens": tokenCount,
 	})
 }
 

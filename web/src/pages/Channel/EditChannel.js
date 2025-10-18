@@ -16,7 +16,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -48,6 +48,8 @@ import {
   Col,
 } from '@douyinfe/semi-ui';
 import { getChannelModels, loadChannelModels } from '../../components/utils.js';
+import ModelMappingEditor from '../../components/shared/ModelMappingEditor.js';
+import { useModelMapping } from '../../hooks/useModelMapping.js';
 import {
   IconEyeOpened,
   IconEyeClosedSolid,
@@ -76,9 +78,12 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
     option.label.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Create memoized Set for selected models to optimize lookup performance
+  const selectedModelsSet = useMemo(() => new Set(localSelectedModels), [localSelectedModels]);
+
   // Handle check/uncheck of individual model
   const handleCheckboxChange = (value) => {
-    if (localSelectedModels.includes(value)) {
+    if (selectedModelsSet.has(value)) {
       setLocalSelectedModels(localSelectedModels.filter(model => model !== value));
     } else {
       setLocalSelectedModels([...localSelectedModels, value]);
@@ -107,14 +112,31 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
         newSelection.push(value);
       } else {
         // If selected, remove it
-        newSelection.splice(index, index + 1); // Use index + 1 for correct splice
+        newSelection.splice(index, 1); // Fix splice error: remove 1 element at found index
       }
     });
 
     setLocalSelectedModels(newSelection);
-  };
+   };
 
-  // Fetch models from API - using the same logic as fetchUpstreamModelList
+   // Copy selected models to clipboard
+   const handleCopySelected = async () => {
+     if (localSelectedModels.length === 0) {
+       showWarning(t('没有选择的模型！'));
+       return;
+     }
+
+     try {
+       const modelsText = localSelectedModels.join('\n');
+       await navigator.clipboard.writeText(modelsText);
+       showSuccess(t('已复制选择的模型到剪贴板'));
+     } catch (error) {
+       console.error('Failed to copy to clipboard:', error);
+       showError(t('复制失败'));
+     }
+   };
+
+   // Fetch models from API - using the same logic as fetchUpstreamModelList
   const fetchModels = async () => {
     try {
       setLoading(true);
@@ -180,312 +202,180 @@ const ModelSelector = ({ channelId, type, apiKey, baseUrl, isEdit, selectedModel
     fetchModels();
   }, []);
 
-  return (
-    <div>
-      <div style={{ display: 'flex', marginBottom: 16, alignItems: 'center' }}>
-        <Input
-          placeholder={t('搜索模型')}
-          value={search}
-          onChange={setSearch}
-          style={{ flex: 1 }}
-          showClear
-        />
-        <Button
-          icon={<IconRefresh />}
-          onClick={fetchModels}
-          loading={loading}
-          style={{ marginLeft: 8 }}
-        />
-        <Button onClick={handleSelectAll} style={{ marginLeft: 8 }}>{t('全选')}</Button>
-        <Button onClick={handleDeselectAll} style={{ marginLeft: 8 }}>{t('反选')}</Button>
-      </div>
-
-      <div style={{ maxHeight: '350px', overflowY: 'auto', border: '1px solid var(--semi-color-border)', padding: 8 }}>
-        <Row>
-          {filteredOptions.map((option) => (
-            <Col span={6} key={option.value} style={{ marginBottom: 8 }}>
-              <SemiCheckbox
-                checked={localSelectedModels.includes(option.value)}
-                onChange={() => handleCheckboxChange(option.value)}
-                style={{ width: '100%' }}
-              >
-                <Typography.Text
-                  ellipsis={{ showTooltip: true }}
-                  style={{
-                    maxWidth: '100%',
-                    wordBreak: 'break-word',
-                    whiteSpace: 'normal',
-                    lineHeight: '1.2'
-                  }}
-                >
-                  {option.label}
-                </Typography.Text>
-              </SemiCheckbox>
-            </Col>
-          ))}
-        </Row>
-      </div>
-
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16, marginBottom: 8 }}>
-        <Button type='primary' onClick={applySelection}>{t('确定')}</Button>
-        <Button style={{ marginLeft: 8 }} onClick={() => Modal.destroyAll()}>{t('取消')}</Button>
-      </div>
-    </div>
-  );
-};
-
-const MODEL_MAPPING_EXAMPLE = {
-  'gpt-3.5-turbo': 'gpt-3.5-turbo-0125',
-};
-
-// ModelMappingEditor component for visual key-value editing
-const ModelMappingEditor = ({ value, onChange, placeholder }) => {
-  const { t } = useTranslation();
-  const [mappingPairs, setMappingPairs] = useState([]);
-  const [mode, setMode] = useState('visual'); // 'visual' or 'json'
-  const [jsonValue, setJsonValue] = useState('');
-  const [jsonError, setJsonError] = useState('');
-
-  // Parse JSON value to key-value pairs
-  const parseJsonToMappings = (jsonStr) => {
-    if (!jsonStr || jsonStr.trim() === '') {
-      return [];
-    }
-    try {
-      const parsed = JSON.parse(jsonStr);
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        return Object.entries(parsed).map(([key, value]) => ({ 
-          id: Date.now() + Math.random(), 
-          key, 
-          value 
-        }));
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  };
-
-  // Convert key-value pairs to JSON string
-  const mappingsToJson = (pairs) => {
-    if (!pairs || pairs.length === 0) {
-      return '';
-    }
-    const obj = {};
-    pairs.forEach(pair => {
-      if (pair.key && pair.key.trim() !== '') {
-        obj[pair.key.trim()] = pair.value || '';
-      }
-    });
-    return Object.keys(obj).length > 0 ? JSON.stringify(obj, null, 2) : '';
-  };
-
-  // Initialize component state from value prop
-  useEffect(() => {
-    const pairs = parseJsonToMappings(value);
-    setMappingPairs(pairs.length > 0 ? pairs : [{ id: Date.now() + Math.random(), key: '', value: '' }]);
-    setJsonValue(value || '');
-    setJsonError('');
-  }, [value]);
-
-  // Add new mapping pair
-  const addMappingPair = () => {
-    const newPairs = [...mappingPairs, { id: Date.now() + Math.random(), key: '', value: '' }];
-    setMappingPairs(newPairs);
-  };
-
-  // Remove mapping pair
-  const removeMappingPair = (index) => {
-    const newPairs = mappingPairs.filter((_, i) => i !== index);
-    const finalPairs = newPairs.length > 0 ? newPairs : [{ id: Date.now() + Math.random(), key: '', value: '' }];
-    setMappingPairs(finalPairs);
-    // Update parent with new JSON
-    const jsonStr = mappingsToJson(finalPairs);
-    onChange(jsonStr);
-  };
-
-  // Update mapping pair
-  const updateMappingPair = (index, field, value) => {
-    const newPairs = [...mappingPairs];
-    newPairs[index] = { ...newPairs[index], [field]: value };
-    setMappingPairs(newPairs);
-    
-    // Update parent with new JSON
-    const jsonStr = mappingsToJson(newPairs);
-    onChange(jsonStr);
-  };
-
-  // Handle mode switch
-  const switchMode = (newMode) => {
-    if (newMode === 'json' && mode === 'visual') {
-      // Switching from visual to JSON
-      const jsonStr = mappingsToJson(mappingPairs);
-      setJsonValue(jsonStr);
-      setJsonError('');
-    } else if (newMode === 'visual' && mode === 'json') {
-      // Switching from JSON to visual
-      try {
-        if (jsonValue.trim() === '') {
-          setMappingPairs([{ id: Date.now() + Math.random(), key: '', value: '' }]);
-          setJsonError('');
-        } else {
-          const parsed = JSON.parse(jsonValue);
-          if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-            const pairs = Object.entries(parsed).map(([key, value]) => ({ 
-              id: Date.now() + Math.random(), 
-              key, 
-              value 
-            }));
-            setMappingPairs(pairs.length > 0 ? pairs : [{ id: Date.now() + Math.random(), key: '', value: '' }]);
-            setJsonError('');
-          } else {
-            setJsonError(t('请输入有效的JSON对象格式'));
-            return;
-          }
-        }
-      } catch (error) {
-        setJsonError(t('JSON格式错误: {{message}}', { message: error.message }));
-        return;
-      }
-    }
-    setMode(newMode);
-  };
-
-  // Handle JSON input change
-  const handleJsonChange = (newValue) => {
-    setJsonValue(newValue);
-    
-    // Validate JSON and update parent
-    if (newValue.trim() === '') {
-      setJsonError('');
-      onChange('');
-      return;
-    }
-    
-    try {
-      const parsed = JSON.parse(newValue);
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-        setJsonError('');
-        onChange(newValue);
-      } else {
-        setJsonError(t('请输入有效的JSON对象格式'));
-      }
-    } catch (error) {
-      setJsonError(t('JSON格式错误: {{message}}', { message: error.message }));
-    }
-  };
-
-  // Fill template
-  const fillTemplate = () => {
-    const templateJson = JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2);
-    if (mode === 'visual') {
-      const pairs = parseJsonToMappings(templateJson);
-      setMappingPairs(pairs);
-      onChange(templateJson);
-    } else {
-      setJsonValue(templateJson);
-      handleJsonChange(templateJson);
-    }
+  // Responsive grid calculation
+  const getGridSpan = () => {
+    return 8
   };
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-        <div style={{ display: 'flex', marginRight: 16 }}>
-          <Button
-            type={mode === 'visual' ? 'primary' : 'tertiary'}
-            onClick={() => switchMode('visual')}
-            style={{ 
-              borderRadius: '6px 0 0 6px'
-            }}
-          >
-            {t('可视化编辑')}
-          </Button>
-          <Button
-            type={mode === 'json' ? 'primary' : 'tertiary'}
-            onClick={() => switchMode('json')}
-            style={{ 
-              borderRadius: '0 6px 6px 0'
-            }}
-          >
-            {t('JSON编辑')}
-          </Button>
-        </div>
-        <Typography.Text
-          style={{
-            color: 'rgba(var(--semi-blue-5), 1)',
-            userSelect: 'none',
-            cursor: 'pointer',
-          }}
-          onClick={fillTemplate}
-        >
-          {t('填入模板')}
-        </Typography.Text>
-      </div>
-
-      {mode === 'visual' ? (
-        <div>
-          <div style={{ marginBottom: 10 }}>
-            <Typography.Text type="secondary">{placeholder}</Typography.Text>
-          </div>
-          
-          {mappingPairs.map((pair, index) => (
-            <div key={pair.id} style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
-              <Input
-                placeholder={t('目标模型名称')}
-                value={pair.key}
-                onChange={(value) => updateMappingPair(index, 'key', value)}
-                style={{ flex: 1, marginRight: 8 }}
-              />
-              <Typography.Text style={{ margin: '0 8px' }}>→</Typography.Text>
-              <Input
-                placeholder={t('实际模型名称')}
-                value={pair.value}
-                onChange={(value) => updateMappingPair(index, 'value', value)}
-                style={{ flex: 1, marginRight: 8 }}
-              />
-              <Button
-                type="danger"
-                icon={<IconMinusCircle />}
-                size="small"
-                onClick={() => removeMappingPair(index)}
-                style={{ marginLeft: 4 }}
-              />
-            </div>
-          ))}
-          
-          <Button
-            type="tertiary"
-            icon={<IconPlusCircle />}
-            onClick={addMappingPair}
-            style={{ width: '100%', marginTop: 8 }}
-          >
-            {t('添加映射')}
-          </Button>
-        </div>
-      ) : (
-        <div>
-          <TextArea
-            placeholder={
-              t(
-                '此项可选，用于修改请求体中的模型名称，为一个 JSON 字符串，键为请求中模型名称，值为要替换的模型名称，例如：',
-              ) + `\n${JSON.stringify(MODEL_MAPPING_EXAMPLE, null, 2)}`
-            }
-            value={jsonValue}
-            onChange={handleJsonChange}
-            autosize
-            autoComplete='new-password'
+    <div style={{ width: '100%', maxWidth: '1000px' }}>
+      {/* Enhanced Search and Control Area */}
+      <div style={{
+        backgroundColor: 'var(--semi-color-fill-0)',
+        borderRadius: '8px',
+        padding: '16px',
+        marginBottom: '16px',
+      }}>
+        <Space wrap align="center" style={{ width: '100%' }}>
+          <Input
+            placeholder={t('搜索模型')}
+            value={search}
+            onChange={setSearch}
+            style={{ minWidth: '200px', flex: '1' }}
+            showClear
           />
-          {jsonError && (
-            <Typography.Text type="danger" style={{ marginTop: 4, display: 'block' }}>
-              {jsonError}
+          <Space wrap>
+            <Tooltip content={t('刷新模型列表')}>
+              <Button
+                icon={<IconRefresh />}
+                onClick={fetchModels}
+                loading={loading}
+                shape="round"
+              />
+            </Tooltip>
+            <Tooltip content={t('全选可见模型')}>
+              <Button onClick={handleSelectAll} shape="round" type="secondary">
+                {t('全选')}
+              </Button>
+            </Tooltip>
+            <Tooltip content={t('反选可见模型')}>
+              <Button onClick={handleDeselectAll} shape="round" type="tertiary">
+                {t('反选')}
+              </Button>
+            </Tooltip>
+            <Tooltip content={t('复制已选模型')}>
+              <Button
+                onClick={handleCopySelected}
+                disabled={localSelectedModels.length === 0}
+                shape="round"
+                type="primary"
+                theme="light"
+                style={{ color: '#1890ff' }}
+              >
+                {t('复制已选')}
+              </Button>
+            </Tooltip>
+          </Space>
+        </Space>
+      </div>
+
+      {/* Enhanced Model List Container */}
+      <div style={{
+        height: '400px',
+        overflowY: 'auto',
+        border: '1px solid var(--semi-color-border)',
+        borderRadius: '8px',
+        padding: '16px',
+        backgroundColor: 'var(--semi-color-bg-0)',
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'var(--semi-color-border) transparent'
+      }}>
+        {loading ? (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            flexDirection: 'column'
+          }}>
+            <Spin size="large" />
+            <Typography.Text type="secondary" style={{ marginTop: 12 }}>
+              {t('正在获取模型列表...')}
             </Typography.Text>
-          )}
-        </div>
-      )}
+          </div>
+        ) : filteredOptions.length === 0 ? (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '100%',
+            flexDirection: 'column'
+          }}>
+            <Typography.Text type="tertiary">
+              {search ? t('没有找到匹配的模型') : t('暂无可用模型')}
+            </Typography.Text>
+          </div>
+        ) : (
+          <>
+            <Row gutter={[12, 12]}>
+              {filteredOptions.map((option) => {
+                const isSelected = selectedModelsSet.has(option.value);
+                return (
+                  <Col span={getGridSpan()} key={option.value}>
+                    <div
+                      style={{
+                        border: `1px solid ${isSelected ? 'var(--semi-color-primary)' : 'var(--semi-color-border)'}`,
+                        borderRadius: '6px',
+                        padding: '8px 12px',
+                        backgroundColor: isSelected ? 'var(--semi-color-primary-light-default)' : 'var(--semi-color-bg-1)',
+                        transition: 'all 0.2s ease',
+                        cursor: 'pointer',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                      onClick={() => handleCheckboxChange(option.value)}
+                    >
+                      <SemiCheckbox
+                        checked={isSelected}
+                        onChange={(e) => { e.stopPropagation(); handleCheckboxChange(option.value); }}
+                        style={{ flexShrink: 0 }}
+                      />
+                      <Typography.Text
+                        ellipsis={{ showTooltip: true }}
+                        style={{
+                          marginLeft: '8px',
+                          fontSize: '13px',
+                          lineHeight: '1.3',
+                          wordBreak: 'break-word',
+                          flex: 1,
+                          color: isSelected ? 'var(--semi-color-primary)' : 'var(--semi-color-text-0)'
+                        }}
+                        strong={isSelected}
+                      >
+                        {option.label}
+                      </Typography.Text>
+                    </div>
+                  </Col>
+                );
+              })}
+            </Row>
+          </>
+        )}
+      </div>
+
+      {/* Enhanced Footer */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: '16px',
+        padding: '12px 16px',
+        backgroundColor: 'var(--semi-color-fill-0)',
+        borderRadius: '8px',
+        marginBottom: '20px'
+      }}>
+        <Typography.Text type="secondary" style={{ fontSize: '13px' }}>
+          {t('共 {{total}} 个模型，已选择 {{selected}} 个',{ total: filteredOptions.length, selected: localSelectedModels.length })}
+        </Typography.Text>
+        <Space>
+          <Button onClick={() => Modal.destroyAll()} type="tertiary">
+            {t('取消')}
+          </Button>
+          <Button
+            type='primary'
+            onClick={applySelection}
+            disabled={loading}
+          >
+            {t('确定 ({{count}})', { count: localSelectedModels.length })}
+          </Button>
+        </Space>
+      </div>
     </div>
   );
 };
+
+
 
 const STATUS_CODE_MAPPING_EXAMPLE = {
   400: '500',
@@ -578,127 +468,29 @@ const EditChannel = (props) => {
   const [fullModels, setFullModels] = useState([]);
   const [customModel, setCustomModel] = useState('');
 
-  // 用于追踪模型的原始名称映射关系 { displayName: originalName }
-  const [modelOriginalMapping, setModelOriginalMapping] = useState({});
-
-  // 解析模型映射配置的工具函数
-  const parseModelMapping = (mappingValue) => {
-    if (!mappingValue || typeof mappingValue !== 'string' || mappingValue.trim() === '') {
-      return null;
-    }
-    
-    try {
-      const mapping = JSON.parse(mappingValue);
-      if (typeof mapping !== 'object' || mapping === null) {
-        return null;
-      }
-      return mapping;
-    } catch (error) {
-      console.warn('模型重定向 JSON 解析失败:', error);
-      return null;
-    }
-  };
+  // 使用模型映射 Hook
+  const {
+    syncModelMappingToModels,
+    initializeModelMapping,
+    resetModelMapping
+  } = useModelMapping();
 
   // 获取当前模型列表的工具函数
   const getCurrentModels = () => {
     return inputs.models || [];
   };
 
-  // 更新模型列表的统一方法
-  const updateModelsList = (newModels, newMapping) => {
-    const uniqueModels = Array.from(new Set(newModels.filter(model => model && model.trim())));
-    
-    setInputs((inputs) => ({ ...inputs, models: uniqueModels }));
-    setModelOriginalMapping(newMapping);
-  };
+  // 更新模型列表的回调函数
+const updateModelsCallback = useCallback((newModels) => {
+  setInputs((prevInputs) => ({ ...prevInputs, models: newModels }));
+}, []);
 
-  // 恢复模型到原始名称
-  const restoreModelsToOriginalNames = () => {
+  // 包装后的同步函数，传入当前模型和更新回调
+  const handleSyncModelMapping = useCallback((mappingValue) => {
     const currentModels = getCurrentModels();
-    const restoredModels = currentModels.map(model => modelOriginalMapping[model] || model);
-    
-    // 使用数组比较而不是JSON.stringify提高性能
-    const hasChanges = currentModels.length !== restoredModels.length || 
-      currentModels.some((model, index) => model !== restoredModels[index]);
-    
-    if (hasChanges) {
-      updateModelsList(restoredModels, {});
-    }
-  };
+    syncModelMappingToModels(mappingValue, currentModels, updateModelsCallback);
+  }, [syncModelMappingToModels, updateModelsCallback, inputs.models]);
 
-  // 应用模型映射的核心逻辑
-  const applyModelMapping = (mapping, currentModels, currentMapping) => {
-    let updatedModels = [...currentModels];
-    let newMapping = { ...currentMapping };
-    let hasChanges = false;
-
-    // 遍历重定向映射
-    Object.entries(mapping).forEach(([key, mappedValue]) => {
-      if (typeof key === 'string' && typeof mappedValue === 'string') {
-        const keyTrimmed = key.trim();
-        const valueTrimmed = mappedValue.trim();
-
-        if (keyTrimmed && valueTrimmed) {
-          // 查找模型配置中是否存在重定向的"值"（原始模型名）
-          const valueIndex = updatedModels.findIndex(model => {
-            return model === valueTrimmed || newMapping[model] === valueTrimmed;
-          });
-
-          if (valueIndex !== -1) {
-            const currentDisplayName = updatedModels[valueIndex];
-            if (currentDisplayName !== keyTrimmed) {
-              // 记录原始映射关系
-              if (!newMapping[keyTrimmed]) {
-                newMapping[keyTrimmed] = newMapping[currentDisplayName] || currentDisplayName;
-              }
-              // 清理旧的映射关系
-              if (newMapping[currentDisplayName]) {
-                delete newMapping[currentDisplayName];
-              }
-              // 更新显示名称为重定向的键
-              updatedModels[valueIndex] = keyTrimmed;
-              hasChanges = true;
-            }
-          }
-        }
-      }
-    });
-
-    // 处理不在映射中的模型，恢复为原始名称
-    const mappingKeys = new Set(Object.keys(mapping).map(key => key.trim()));
-    updatedModels = updatedModels.map(model => {
-      if (!mappingKeys.has(model) && newMapping[model]) {
-        const originalName = newMapping[model];
-        delete newMapping[model];
-        hasChanges = true;
-        return originalName;
-      }
-      return model;
-    });
-
-    return { updatedModels, newMapping, hasChanges };
-  };
-
-  // 实时同步模型重定向到模型配置的函数
-  const syncModelMappingToModels = (mappingValue) => {
-    const mapping = parseModelMapping(mappingValue);
-    
-    if (!mapping) {
-      restoreModelsToOriginalNames();
-      return;
-    }
-
-    const currentModels = getCurrentModels();
-    const { updatedModels, newMapping, hasChanges } = applyModelMapping(
-      mapping, 
-      currentModels, 
-      modelOriginalMapping
-    );
-
-    if (hasChanges) {
-      updateModelsList(updatedModels, newMapping);
-    }
-  };
 
   // Handle changes to the key list
   const updateKeyListToInput = (newKeyList) => {
@@ -760,10 +552,9 @@ const EditChannel = (props) => {
       return;
     }
 
-    // 处理模型重定向变更时自动同步模型配置（实时同步）
+    // 处理模型重定向变更时只更新状态，不触发实时同步
     if (name === 'model_mapping') {
       setInputs((inputs) => ({ ...inputs, [name]: value }));
-      syncModelMappingToModels(value);
       return;
     }
 
@@ -838,6 +629,7 @@ const EditChannel = (props) => {
       }
 
 
+      // 更新基础模型选项供参考，但不自动填充到 Select 组件
       let localModels = [];
       switch (value) {
         case 2:
@@ -877,9 +669,6 @@ const EditChannel = (props) => {
         default:
           localModels = getChannelModels(value);
           break;
-      }
-      if (inputs.models.length === 0 || inputs.type !== value) { // Only update models if type changes or models are empty
-        setInputs((inputs) => ({ ...inputs, models: localModels }));
       }
       setBasicModels(localModels);
     }
@@ -968,19 +757,7 @@ const EditChannel = (props) => {
       setOriginalModelMapping(data.model_mapping);
 
       // 初始化模型原始映射关系
-      const mapping = parseModelMapping(data.model_mapping);
-      if (mapping) {
-        const initialMapping = {};
-        // 根据当前的模型映射和模型列表，建立原始映射关系
-        Object.entries(mapping).forEach(([key, value]) => {
-          if (data.models.includes(key)) {
-            initialMapping[key] = value;
-          }
-        });
-        setModelOriginalMapping(initialMapping);
-      } else {
-        setModelOriginalMapping({});
-      }
+      initializeModelMapping(data.model_mapping, data.models);
 
       setInputs(data);
       if (data.auto_ban === 0) {
@@ -1060,10 +837,9 @@ const EditChannel = (props) => {
       setInputs(originInputs);
       setOriginalModelMapping(''); // Initialize as an empty string
       // 重置模型原始映射关系
-      setModelOriginalMapping({});
+      resetModelMapping();
       let localModels = getChannelModels(originInputs.type); // Use originInputs.type for initial state
       setBasicModels(localModels);
-      setInputs((inputs) => ({ ...inputs, models: localModels }));
       setComponentResetKey(prev => prev + 1);
     }
   }, [props.editingChannel.id]);
@@ -1078,9 +854,9 @@ const EditChannel = (props) => {
   // 在组件卸载时清理资源
   useEffect(() => {
     return () => {
-      setModelOriginalMapping({});
+      resetModelMapping();
     };
-  }, []);
+  }, [resetModelMapping]);
 
 
   const submit = async () => {
@@ -1302,8 +1078,9 @@ const EditChannel = (props) => {
   // Toggle multi-key view disable state
   const switchToSingleKeyMode = () => {
     setUseKeyListMode(false);
-    // When switching back to single mode, combine existing keys back into one string
-    const combinedKey = keyList.join(',');
+    // When switching back to single mode, filter out empty keys before joining
+    const filteredKeyList = keyList.filter(key => key && key.trim().length > 0);
+    const combinedKey = filteredKeyList.join(',');
     setInputs(inputs => ({ ...inputs, key: combinedKey }));
     setKeyList([]); // Clear key list state
   };
@@ -1386,9 +1163,9 @@ const EditChannel = (props) => {
               {t('切换为单密钥模式')}
             </Button>
           </div>
-          
-          <div style={{ 
-            maxHeight: '50vh', 
+
+          <div style={{
+            maxHeight: '50vh',
             overflowY: 'auto',
             border: '1px solid var(--semi-color-border)',
             borderRadius: '6px',
@@ -1397,9 +1174,9 @@ const EditChannel = (props) => {
           }}>
             {keyList.map((key, index) => (
               <div key={index} style={{ display: 'flex', marginBottom: '5px', alignItems: 'center' }} className="key-input-item">
-                <Typography.Text 
-                  style={{ 
-                    minWidth: '30px', 
+                <Typography.Text
+                  style={{
+                    minWidth: '30px',
                     textAlign: 'center',
                     color: 'var(--semi-color-text-2)',
                     fontSize: 12,
@@ -1422,7 +1199,7 @@ const EditChannel = (props) => {
                   theme="borderless"
                   size="small"
                   onClick={() => copyKey(key)}
-                  style={{ 
+                  style={{
                     marginLeft: '4px',
                     minWidth: '28px',
                     opacity: key && key.trim() ? 1 : 0.3
@@ -1435,7 +1212,7 @@ const EditChannel = (props) => {
                   theme="borderless"
                   size="small"
                   onClick={() => removeKeyInput(index)}
-                  style={{ 
+                  style={{
                     marginLeft: '8px',
                     minWidth: '28px',
                     opacity: keyList.length <= 1 ? 0.3 : 1
@@ -1445,7 +1222,7 @@ const EditChannel = (props) => {
               </div>
             ))}
           </div>
-          
+
           <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Button
@@ -1470,7 +1247,7 @@ const EditChannel = (props) => {
               {t('总计: {{count}} 个密钥', { count: keyList.length })}
             </Typography.Text>
           </div>
-          
+
           <Typography.Text type="tertiary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
             {t('💡 提示: 输入逗号或回车可快速添加新密钥')}
           </Typography.Text>
@@ -1508,7 +1285,7 @@ const EditChannel = (props) => {
             </Button>
           )}
         </div>
-        
+
         <Input
           ref={singleKeyInputRef}
           name='key'
@@ -1581,7 +1358,7 @@ const EditChannel = (props) => {
             </Space>
           }
         />
-        
+
         {/* 清空按钮 */}
         {inputs.key && (
           <Button
@@ -1973,7 +1750,9 @@ const EditChannel = (props) => {
             filter
             searchPosition='dropdown'
             onChange={(value) => {
-              handleInputChange('models', value);
+              // 对模型列表进行去重处理（区分大小写）
+              const deduplicatedModels = [...new Set(value.filter(model => model && typeof model === 'string' && model.trim() !== ''))];
+              handleInputChange('models', deduplicatedModels);
             }}
             value={inputs.models}
             autoComplete='new-password'
@@ -2033,6 +1812,7 @@ const EditChannel = (props) => {
                   // Using Modal.info for better customization
                   Modal.info({
                     title: t('高级模型选择'),
+                    icon: null,
                     content: (
                       <div>
                         <ModelSelector
@@ -2105,6 +1885,7 @@ const EditChannel = (props) => {
             key={`model-mapping-${componentResetKey}`}
             value={originalModelMapping || inputs.model_mapping}
             onChange={(value) => handleInputChange('model_mapping', value)}
+            onRealtimeChange={handleSyncModelMapping}
             placeholder={t('此项可选，用于修改请求体中的模型名称')}
           />
           <div style={{ marginTop: 8 }}>
@@ -2350,3 +2131,4 @@ const EditChannel = (props) => {
 };
 
 export default EditChannel;
+

@@ -37,7 +37,6 @@ import (
 	"veloera/relay/helper"
 	"veloera/service"
 	"veloera/setting"
-	"veloera/setting/model_setting"
 
 	"github.com/bytedance/gopkg/util/gopool"
 	"github.com/shopspring/decimal"
@@ -240,7 +239,7 @@ func TextHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
 	adaptor.Init(relayInfo)
 	var requestBody io.Reader
 
-	if model_setting.GetGlobalSettings().PassThroughRequestEnabled {
+	if shouldUsePassThrough(adaptor, relayInfo) {
 		body, err := common.GetRequestBody(c)
 		if err != nil {
 			return service.OpenAIErrorWrapperLocal(err, "get_request_body_failed", http.StatusInternalServerError)
@@ -382,18 +381,19 @@ func checkRequestSensitive(textRequest *dto.GeneralOpenAIRequest, info *relaycom
 
 // 预扣费并返回用户剩余配额
 func preConsumeQuota(c *gin.Context, preConsumedQuota int, relayInfo *relaycommon.RelayInfo) (int, int, *dto.OpenAIErrorWithStatusCode) {
-	userQuota, err := model.GetUserQuota(relayInfo.UserId, false)
+	userBalance, err := model.GetUserQuotaBalance(relayInfo.UserId, false)
 	if err != nil {
 		return 0, 0, service.OpenAIErrorWrapperLocal(err, "get_user_quota_failed", http.StatusInternalServerError)
 	}
-	if userQuota <= 0 {
+	totalQuota := userBalance.Total()
+	if totalQuota <= 0 {
 		return 0, 0, service.OpenAIErrorWrapperLocal(errors.New("user quota is not enough"), "insufficient_user_quota", http.StatusForbidden)
 	}
-	if userQuota-preConsumedQuota < 0 {
-		return 0, 0, service.OpenAIErrorWrapperLocal(fmt.Errorf("chat pre-consumed quota failed, user quota: %s, need quota: %s", common.FormatQuota(userQuota), common.FormatQuota(preConsumedQuota)), "insufficient_user_quota", http.StatusForbidden)
+	if totalQuota-preConsumedQuota < 0 {
+		return 0, 0, service.OpenAIErrorWrapperLocal(fmt.Errorf("chat pre-consumed quota failed, user quota: %s, need quota: %s", common.FormatQuota(totalQuota), common.FormatQuota(preConsumedQuota)), "insufficient_user_quota", http.StatusForbidden)
 	}
-	relayInfo.UserQuota = userQuota
-	if userQuota > 100*preConsumedQuota {
+	relayInfo.UserQuota = totalQuota
+	if totalQuota > 100*preConsumedQuota {
 		// 用户额度充足，判断令牌额度是否充足
 		if !relayInfo.TokenUnlimited {
 			// 非无限令牌，判断令牌额度是否充足
@@ -401,13 +401,13 @@ func preConsumeQuota(c *gin.Context, preConsumedQuota int, relayInfo *relaycommo
 			if tokenQuota > 100*preConsumedQuota {
 				// 令牌额度充足，信任令牌
 				preConsumedQuota = 0
-				common.LogInfo(c, fmt.Sprintf("user %d quota %s and token %d quota %d are enough, trusted and no need to pre-consume", relayInfo.UserId, common.FormatQuota(userQuota), relayInfo.TokenId, tokenQuota))
+				common.LogInfo(c, fmt.Sprintf("user %d quota %s and token %d quota %d are enough, trusted and no need to pre-consume", relayInfo.UserId, common.FormatQuota(totalQuota), relayInfo.TokenId, tokenQuota))
 			}
 		} else {
 			// in this case, we do not pre-consume quota
 			// because the user has enough quota
 			preConsumedQuota = 0
-			common.LogInfo(c, fmt.Sprintf("user %d with unlimited token has enough quota %s, trusted and no need to pre-consume", relayInfo.UserId, common.FormatQuota(userQuota)))
+			common.LogInfo(c, fmt.Sprintf("user %d with unlimited token has enough quota %s, trusted and no need to pre-consume", relayInfo.UserId, common.FormatQuota(totalQuota)))
 		}
 	}
 
@@ -416,12 +416,17 @@ func preConsumeQuota(c *gin.Context, preConsumedQuota int, relayInfo *relaycommo
 		if err != nil {
 			return 0, 0, service.OpenAIErrorWrapperLocal(err, "pre_consume_token_quota_failed", http.StatusForbidden)
 		}
-		err = model.DecreaseUserQuota(relayInfo.UserId, preConsumedQuota)
-		if err != nil {
-			return 0, 0, service.OpenAIErrorWrapperLocal(err, "decrease_user_quota_failed", http.StatusInternalServerError)
+		subscriptionUsed, quotaUsed, consumeErr := model.ConsumeUserQuota(relayInfo.UserId, preConsumedQuota)
+		if consumeErr != nil {
+			rollbackErr := model.IncreaseTokenQuota(relayInfo.TokenId, relayInfo.TokenKey, preConsumedQuota)
+			if rollbackErr != nil {
+				common.LogError(c, fmt.Sprintf("failed to rollback token pre-consume for user %d token %d: %s", relayInfo.UserId, relayInfo.TokenId, rollbackErr.Error()))
+			}
+			return 0, 0, service.OpenAIErrorWrapperLocal(consumeErr, "decrease_user_quota_failed", http.StatusInternalServerError)
 		}
+		relayInfo.TrackConsumedQuota(subscriptionUsed, quotaUsed)
 	}
-	return preConsumedQuota, userQuota, nil
+	return preConsumedQuota, totalQuota, nil
 }
 
 func returnPreConsumedQuota(c *gin.Context, relayInfo *relaycommon.RelayInfo, userQuota int, preConsumedQuota int) {
@@ -435,6 +440,183 @@ func returnPreConsumedQuota(c *gin.Context, relayInfo *relaycommon.RelayInfo, us
 			}
 		})
 	}
+}
+
+func TokenCountHelper(c *gin.Context) (openaiErr *dto.OpenAIErrorWithStatusCode) {
+	relayInfo := relaycommon.GenRelayInfo(c)
+
+	// get & validate textRequest for token counting
+	textRequest, err := getAndValidateTokenCountRequest(c, relayInfo)
+	if err != nil {
+		common.LogError(c, fmt.Sprintf("getAndValidateTokenCountRequest failed: %s", err.Error()))
+		// Return Claude API-formatted error for validation failures (Requirement 6.2)
+		return createTokenCountValidationError(err.Error())
+	}
+
+	// Apply model mapping
+	err = helper.ModelMappedHelper(c, relayInfo)
+	if err != nil {
+		return createTokenCountValidationError(fmt.Sprintf("Model mapping failed: %s", err.Error()))
+	}
+
+	textRequest.Model = relayInfo.UpstreamModelName
+
+	// Get adaptor for the channel
+	adaptor := GetAdaptor(relayInfo.ApiType)
+	if adaptor == nil {
+		return createTokenCountValidationError(fmt.Sprintf("Unsupported channel type for model '%s'", relayInfo.OriginModelName))
+	}
+	adaptor.Init(relayInfo)
+
+	// Convert request to channel-specific format
+	convertedRequest, err := adaptor.ConvertOpenAIRequest(c, relayInfo, textRequest)
+	if err != nil {
+		return createTokenCountValidationError(fmt.Sprintf("Request conversion failed: %s", err.Error()))
+	}
+
+	jsonData, err := json.Marshal(convertedRequest)
+	if err != nil {
+		return service.OpenAIErrorWrapperLocal(err, "json_marshal_failed", http.StatusInternalServerError)
+	}
+
+	if common.DebugEnabled {
+		println("token count requestBody: ", string(jsonData))
+	}
+
+	requestBody := bytes.NewBuffer(jsonData)
+
+	// Make request to upstream
+	resp, err := adaptor.DoRequest(c, relayInfo, requestBody)
+	if err != nil {
+		// Enhanced error handling for upstream request failures
+		if strings.Contains(err.Error(), "connection") || strings.Contains(err.Error(), "timeout") {
+			return createTokenCountServiceError("Service temporarily unavailable. Please try again later.")
+		}
+		return service.OpenAIErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
+	}
+
+	statusCodeMappingStr := c.GetString("status_code_mapping")
+
+	if resp != nil {
+		httpResp := resp.(*http.Response)
+		if httpResp.StatusCode != http.StatusOK {
+			openaiErr = service.RelayErrorHandler(httpResp, false)
+			// reset status code
+			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
+			return openaiErr
+		}
+
+		// Handle response - this will write directly to the client
+		_, openaiErr = adaptor.DoResponse(c, httpResp, relayInfo)
+		if openaiErr != nil {
+			// reset status code
+			service.ResetStatusCode(openaiErr, statusCodeMappingStr)
+			return openaiErr
+		}
+
+		// Mark response as written
+		c.Set("response_written", true)
+	}
+
+	// No usage tracking for token counting - this is the key requirement
+	// Token counting requests should not consume user quotas or be logged as billable usage
+	return nil
+}
+
+// createTokenCountValidationError creates a Claude API-formatted validation error
+func createTokenCountValidationError(message string) *dto.OpenAIErrorWithStatusCode {
+	return &dto.OpenAIErrorWithStatusCode{
+		Error: dto.OpenAIError{
+			Type:    "invalid_request_error",
+			Code:    "invalid_request_error",
+			Message: message,
+		},
+		StatusCode: http.StatusBadRequest,
+	}
+}
+
+// createTokenCountServiceError creates a Claude API-formatted service error
+func createTokenCountServiceError(message string) *dto.OpenAIErrorWithStatusCode {
+	return &dto.OpenAIErrorWithStatusCode{
+		Error: dto.OpenAIError{
+			Type:    "api_error",
+			Code:    "api_error",
+			Message: message,
+		},
+		StatusCode: http.StatusServiceUnavailable,
+	}
+}
+
+func getAndValidateTokenCountRequest(c *gin.Context, relayInfo *relaycommon.RelayInfo) (*dto.GeneralOpenAIRequest, error) {
+	textRequest := &dto.GeneralOpenAIRequest{}
+	err := common.UnmarshalBodyReusable(c, textRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	if textRequest.Model == "" {
+		return nil, errors.New("model is required")
+	}
+
+	// Validate that the model supports token counting
+	if !dto.IsTokenCountSupportedModel(textRequest.Model) {
+		return nil, fmt.Errorf("model '%s' does not support token counting. Supported models: %s",
+			textRequest.Model, strings.Join(dto.TokenCountSupportedModels, ", "))
+	}
+
+	// For token counting, we need messages
+	if len(textRequest.Messages) == 0 {
+		return nil, errors.New("field messages is required")
+	}
+
+	// Validate message content for unsupported media types (Requirement 3.4)
+	err = validateTokenCountMessageContent(textRequest.Messages)
+	if err != nil {
+		return nil, err
+	}
+
+	// Token counting is never streaming
+	relayInfo.IsStream = false
+	textRequest.Stream = false
+
+	// Save request messages for logging (but not for billing)
+	relayInfo.PromptMessages = textRequest.Messages
+
+	return textRequest, nil
+}
+
+// validateTokenCountMessageContent validates that message content types are supported for token counting
+func validateTokenCountMessageContent(messages []dto.Message) error {
+	for i, message := range messages {
+		// Use the existing ParseContent method to get media content
+		contentArray := message.ParseContent()
+		if len(contentArray) > 0 {
+			// This is a content array, validate each content block
+			for j, content := range contentArray {
+				if content.Type != "text" && content.Type != "image" {
+					// Claude supports text and image content for token counting
+					// Other types like audio, video, etc. are not supported
+					return fmt.Errorf("unsupported media type '%s' in message %d, content block %d. Token counting supports text and image content only",
+						content.Type, i+1, j+1)
+				}
+
+				// Additional validation for image content
+				if content.Type == "image" {
+					imageMedia := content.GetImageMedia()
+					if imageMedia == nil {
+						return fmt.Errorf("image content in message %d, content block %d is missing image information", i+1, j+1)
+					}
+					// Note: Claude API handles various image formats, so we don't need to restrict to base64 only
+				}
+
+				// Additional validation for unsupported audio content
+				if content.Type == "input_audio" {
+					return fmt.Errorf("audio content is not supported for token counting in message %d, content block %d", i+1, j+1)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func postConsumeQuota(ctx *gin.Context, relayInfo *relaycommon.RelayInfo,

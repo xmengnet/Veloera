@@ -58,6 +58,13 @@ const (
 	RelayModeResponses
 
 	RelayModeRealtime
+
+	RelayModeTokenCount
+)
+
+// Keys for relayInfo.Other map
+const (
+	KeyEmbeddingInput = "embedding_input"
 )
 
 func Path2RelayMode(path string) int {
@@ -66,6 +73,8 @@ func Path2RelayMode(path string) int {
 		relayMode = RelayModeChatCompletions
 	} else if strings.HasPrefix(path, "/v1/completions") {
 		relayMode = RelayModeCompletions
+	} else if strings.HasPrefix(path, "/v1beta/models/") {
+		relayMode = RelayModeChatCompletions
 	} else if strings.HasPrefix(path, "/v1/embeddings") {
 		relayMode = RelayModeEmbeddings
 	} else if strings.HasSuffix(path, "embeddings") {
@@ -88,6 +97,8 @@ func Path2RelayMode(path string) int {
 		relayMode = RelayModeRerank
 	} else if strings.HasPrefix(path, "/v1/realtime") {
 		relayMode = RelayModeRealtime
+	} else if strings.HasPrefix(path, "/v1/messages/count_tokens") {
+		relayMode = RelayModeTokenCount
 	}
 	return relayMode
 }
